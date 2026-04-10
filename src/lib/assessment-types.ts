@@ -6,6 +6,7 @@ export type Question = {
   type: QuestionType;
   options: string[];
   correctAnswers?: string[];
+  points?: number;
 };
 
 export type Exam = {

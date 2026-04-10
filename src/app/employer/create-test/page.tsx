@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronDown, Clock3 } from 'lucide-react';
+import { Check, ChevronDown, Clock3, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,20 @@ const questionTemplate: Question = {
   type: 'radio',
   options: ['Option A', 'Option B'],
   correctAnswers: [],
+  points: 1,
 };
+
+function defaultOptionsFor(type: QuestionType) {
+  if (type === 'text') {
+    return [] as string[];
+  }
+
+  return ['Option A', 'Option B', 'Option C', 'Option D'];
+}
+
+function defaultPointsFor(type: QuestionType) {
+  return type === 'text' ? 5 : 1;
+}
 
 export default function CreateTestPage() {
   const router = useRouter();
@@ -48,7 +61,9 @@ export default function CreateTestPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [draftQuestion, setDraftQuestion] =
     useState<Question>(questionTemplate);
-  const [optionsInput, setOptionsInput] = useState('Option A, Option B');
+  const [optionDrafts, setOptionDrafts] = useState<string[]>(
+    defaultOptionsFor('radio'),
+  );
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null,
   );
@@ -65,45 +80,60 @@ export default function CreateTestPage() {
   }, [basicForm]);
 
   const openNewQuestionModal = () => {
-    setDraftQuestion({ ...questionTemplate, id: `q-${crypto.randomUUID()}` });
-    setOptionsInput('Option A, Option B');
+    setDraftQuestion({
+      ...questionTemplate,
+      id: `q-${crypto.randomUUID()}`,
+      points: defaultPointsFor('radio'),
+      correctAnswers: [],
+    });
+    setOptionDrafts(defaultOptionsFor('radio'));
     setEditingQuestionId(null);
     setShowQuestionModal(true);
   };
 
   const openEditQuestionModal = (question: Question) => {
+    const nextType = question.type;
     setDraftQuestion({
       ...question,
       correctAnswers: question.correctAnswers ?? [],
+      points: question.points ?? defaultPointsFor(nextType),
     });
-    setOptionsInput(question.options.join(', '));
+
+    setOptionDrafts(
+      nextType === 'text'
+        ? []
+        : question.options.length > 0
+          ? question.options
+          : defaultOptionsFor(nextType),
+    );
+
     setEditingQuestionId(question.id);
     setShowQuestionModal(true);
   };
-
-  const parsedOptions = useMemo(
-    () =>
-      optionsInput
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-    [optionsInput],
-  );
 
   const saveQuestion = () => {
     if (!draftQuestion.title.trim()) {
       return;
     }
 
+    const normalizedOptions =
+      draftQuestion.type === 'text'
+        ? []
+        : optionDrafts.map((item) => item.trim()).filter(Boolean);
+
     const normalizedQuestion: Question = {
       ...draftQuestion,
-      options: draftQuestion.type === 'text' ? [] : parsedOptions,
+      options: normalizedOptions,
       correctAnswers:
         draftQuestion.type === 'text'
           ? []
           : (draftQuestion.correctAnswers ?? []).filter((answer) =>
-              parsedOptions.includes(answer),
+              normalizedOptions.includes(answer),
             ),
+      points: Math.max(
+        1,
+        Number(draftQuestion.points ?? defaultPointsFor(draftQuestion.type)),
+      ),
     };
 
     if (
@@ -178,8 +208,25 @@ export default function CreateTestPage() {
     return 'Text';
   };
 
-  const getQuestionPoint = (type: QuestionType) => {
-    return type === 'text' ? 5 : 1;
+  const toggleCorrectAnswer = (option: string, checked: boolean) => {
+    setDraftQuestion((prev) => {
+      if (prev.type === 'radio') {
+        return {
+          ...prev,
+          correctAnswers: checked ? [option] : [],
+        };
+      }
+
+      const current = prev.correctAnswers ?? [];
+      const next = checked
+        ? [...current.filter((item) => item !== option), option]
+        : current.filter((item) => item !== option);
+
+      return {
+        ...prev,
+        correctAnswers: next,
+      };
+    });
   };
 
   return (
@@ -194,9 +241,7 @@ export default function CreateTestPage() {
 
               <div className='mt-3 flex items-center gap-3'>
                 <div className='flex items-center gap-2'>
-                  <span
-                    className={`flex size-5 items-center justify-center rounded-full text-xs font-semibold ${step === 2 ? 'bg-[#5b3bfe] text-white' : 'bg-[#5b3bfe] text-white'}`}
-                  >
+                  <span className='flex size-5 items-center justify-center rounded-full bg-[#5b3bfe] text-xs font-semibold text-white'>
                     {step === 2 ? <Check className='size-3.5' /> : '1'}
                   </span>
                   <span
@@ -478,7 +523,8 @@ export default function CreateTestPage() {
                           {getQuestionTypeLabel(question.type)}
                         </span>
                         <span className='rounded-md border border-[#d7dce9] px-2 py-0.5 text-[11px] text-[#6d7795]'>
-                          {getQuestionPoint(question.type)} pt
+                          {question.points ?? defaultPointsFor(question.type)}{' '}
+                          pt
                         </span>
                       </div>
                     </div>
@@ -496,7 +542,7 @@ export default function CreateTestPage() {
                         <div className='mt-3 space-y-2'>
                           {question.options.map((option, optionIndex) => (
                             <div
-                              key={`${question.id}-option-${option}`}
+                              key={`${question.id}-option-${option}-${optionIndex}`}
                               className='flex items-center justify-between rounded-md bg-[#eceef4] px-3 py-2 text-sm text-[#3d4864]'
                             >
                               <span>
@@ -558,13 +604,66 @@ export default function CreateTestPage() {
 
       {showQuestionModal ? (
         <div className='fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4'>
-          <Card className='w-full max-w-xl'>
-            <CardHeader>
-              <CardTitle>
-                {editingQuestionId ? 'Edit Question' : 'Add Question'}
-              </CardTitle>
+          <Card className='w-full max-w-4xl rounded-2xl border border-[#dbe0eb] bg-[#f4f6fb] py-4 shadow-xl'>
+            <CardHeader className='border-b border-[#dfe3ed] pb-3'>
+              <div className='flex items-center justify-between gap-3'>
+                <CardTitle className='text-lg font-semibold text-[#223047]'>
+                  {editingQuestionId ? 'Edit Question' : 'Question 1'}
+                </CardTitle>
+
+                <div className='flex items-center gap-2'>
+                  <Label
+                    htmlFor='question-points'
+                    className='text-xs text-[#54627f]'
+                  >
+                    Score:
+                  </Label>
+                  <Input
+                    id='question-points'
+                    type='number'
+                    min={1}
+                    value={
+                      draftQuestion.points ??
+                      defaultPointsFor(draftQuestion.type)
+                    }
+                    onChange={(event) =>
+                      setDraftQuestion((prev) => ({
+                        ...prev,
+                        points: Math.max(1, Number(event.target.value) || 1),
+                      }))
+                    }
+                    className='h-8 w-16 rounded-md bg-white text-xs'
+                  />
+
+                  <select
+                    id='question-type-select'
+                    value={draftQuestion.type}
+                    onChange={(event) => {
+                      const nextType = event.target.value as QuestionType;
+
+                      setDraftQuestion((prev) => ({
+                        ...prev,
+                        type: nextType,
+                        correctAnswers: [],
+                        points:
+                          nextType === 'text'
+                            ? 5
+                            : Math.max(1, Number(prev.points ?? 1)),
+                      }));
+
+                      setOptionDrafts(defaultOptionsFor(nextType));
+                    }}
+                    className='h-8 rounded-md border border-input bg-white px-2 text-xs'
+                  >
+                    <option value='radio'>Radio</option>
+                    <option value='checkbox'>Checkbox</option>
+                    <option value='text'>Text</option>
+                  </select>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className='flex flex-col gap-4'>
+
+            <CardContent className='space-y-4 pt-4'>
               <div className='flex flex-col gap-2'>
                 <Label htmlFor='question-title'>Question Title</Label>
                 <Input
@@ -576,108 +675,140 @@ export default function CreateTestPage() {
                       title: event.target.value,
                     }))
                   }
+                  placeholder='Write your question title'
+                  className='h-11 rounded-lg bg-white'
                 />
               </div>
 
-              <div className='flex flex-col gap-2'>
-                <Label htmlFor='question-type-select'>Question Type</Label>
-                <select
-                  id='question-type-select'
-                  value={draftQuestion.type}
-                  onChange={(event) =>
-                    setDraftQuestion((prev) => ({
-                      ...prev,
-                      type: event.target.value as QuestionType,
-                      correctAnswers: [],
-                    }))
-                  }
-                  className='h-10 rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-                >
-                  <option value='radio'>Radio</option>
-                  <option value='checkbox'>Checkbox</option>
-                  <option value='text'>Text</option>
-                </select>
-              </div>
-
-              {draftQuestion.type !== 'text' ? (
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='question-options'>
-                    Options (comma separated)
-                  </Label>
-                  <Input
-                    id='question-options'
-                    value={optionsInput}
-                    onChange={(event) => setOptionsInput(event.target.value)}
-                    placeholder='Option A, Option B, Option C'
-                  />
+              {draftQuestion.type === 'text' ? (
+                <div className='rounded-lg border border-[#d8ddeb] bg-white p-3 text-sm text-[#5f6b86]'>
+                  This is a descriptive question. Candidate will write a text
+                  answer.
                 </div>
-              ) : null}
+              ) : (
+                <div className='space-y-3'>
+                  {optionDrafts.map((option, index) => {
+                    const letter = String.fromCharCode(65 + index);
+                    const trimmed = option.trim();
+                    const isCorrect = (
+                      draftQuestion.correctAnswers ?? []
+                    ).includes(trimmed);
 
-              {draftQuestion.type !== 'text' && parsedOptions.length > 0 ? (
-                <div className='flex flex-col gap-2'>
-                  <Label>Correct Answer</Label>
-                  <div className='space-y-2 rounded-md border border-input bg-background p-3'>
-                    {parsedOptions.map((option) => {
-                      const isSelected = (
-                        draftQuestion.correctAnswers ?? []
-                      ).includes(option);
+                    return (
+                      <div key={`option-row-${index}`} className='space-y-2'>
+                        <div className='flex items-center justify-between'>
+                          <div className='flex items-center gap-2'>
+                            <span className='flex size-5 items-center justify-center rounded-full border border-[#c7d0e2] text-xs font-semibold text-[#64748b]'>
+                              {letter}
+                            </span>
 
-                      return (
-                        <label
-                          key={`correct-${option}`}
-                          className='flex cursor-pointer items-center gap-2 text-sm'
-                        >
-                          <input
-                            type={
-                              draftQuestion.type === 'radio'
-                                ? 'radio'
-                                : 'checkbox'
-                            }
-                            name='correct-answer'
-                            checked={isSelected}
-                            onChange={(event) => {
-                              if (draftQuestion.type === 'radio') {
-                                setDraftQuestion((prev) => ({
-                                  ...prev,
-                                  correctAnswers: [option],
-                                }));
+                            <label className='flex items-center gap-2 text-xs text-[#5f6b86]'>
+                              <input
+                                type={
+                                  draftQuestion.type === 'radio'
+                                    ? 'radio'
+                                    : 'checkbox'
+                                }
+                                name='correct-answer'
+                                checked={isCorrect}
+                                onChange={(event) =>
+                                  toggleCorrectAnswer(
+                                    trimmed,
+                                    event.target.checked,
+                                  )
+                                }
+                                disabled={!trimmed}
+                              />
+                              Set as correct answer
+                            </label>
+                          </div>
+
+                          <button
+                            type='button'
+                            onClick={() => {
+                              if (optionDrafts.length <= 2) {
                                 return;
                               }
 
-                              setDraftQuestion((prev) => {
-                                const current = prev.correctAnswers ?? [];
-                                const next = event.target.checked
-                                  ? [
-                                      ...current.filter(
-                                        (item) => item !== option,
-                                      ),
-                                      option,
-                                    ]
-                                  : current.filter((item) => item !== option);
+                              const removed = optionDrafts[index]?.trim();
+                              setOptionDrafts((prev) =>
+                                prev.filter(
+                                  (_, optionIndex) => optionIndex !== index,
+                                ),
+                              );
 
-                                return {
-                                  ...prev,
-                                  correctAnswers: next,
-                                };
-                              });
+                              if (!removed) {
+                                return;
+                              }
+
+                              setDraftQuestion((prev) => ({
+                                ...prev,
+                                correctAnswers: (
+                                  prev.correctAnswers ?? []
+                                ).filter((answer) => answer !== removed),
+                              }));
                             }}
-                          />
-                          <span>{option}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+                            className='text-[#8a93ad] hover:text-[#4e5a79]'
+                          >
+                            <Trash2 className='size-4' />
+                          </button>
+                        </div>
 
-              <div className='flex justify-end gap-2'>
+                        <Input
+                          value={option}
+                          onChange={(event) => {
+                            const nextValue = event.target.value;
+                            const previousTrimmed = optionDrafts[index]?.trim();
+
+                            setOptionDrafts((prev) =>
+                              prev.map((item, itemIndex) =>
+                                itemIndex === index ? nextValue : item,
+                              ),
+                            );
+
+                            if (previousTrimmed) {
+                              setDraftQuestion((prev) => ({
+                                ...prev,
+                                correctAnswers: (prev.correctAnswers ?? []).map(
+                                  (answer) =>
+                                    answer === previousTrimmed
+                                      ? nextValue.trim()
+                                      : answer,
+                                ),
+                              }));
+                            }
+                          }}
+                          placeholder={`Option ${letter}`}
+                          className='h-16 rounded-lg border-[#d7dceb] bg-white text-sm'
+                        />
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type='button'
+                    onClick={() => setOptionDrafts((prev) => [...prev, ''])}
+                    className='inline-flex items-center gap-2 text-sm font-medium text-[#4f46e5] hover:text-[#4338ca]'
+                  >
+                    <Plus className='size-4' /> Another options
+                  </button>
+                </div>
+              )}
+
+              <div className='flex items-center justify-end gap-2 border-t border-[#dfe3ed] pt-3'>
                 <Button
                   variant='outline'
                   onClick={() => setShowQuestionModal(false)}
+                  className='h-10 rounded-lg border-[#cfd6e7] bg-white px-7'
                 >
                   Cancel
                 </Button>
-                <Button onClick={saveQuestion}>Save Question</Button>
+                <Button
+                  onClick={saveQuestion}
+                  className='h-10 rounded-lg bg-[#5b3bfe] px-7 text-white hover:bg-[#4d30df]'
+                >
+                  Save
+                </Button>
               </div>
             </CardContent>
           </Card>

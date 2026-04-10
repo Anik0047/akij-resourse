@@ -1,11 +1,15 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createExam, getExams } from '@/lib/assessment-storage';
 import { type Exam } from '@/lib/assessment-types';
 
 export function useExamStore() {
-  const [exams, setExams] = useState<Exam[]>(() => getExams());
+  const [exams, setExams] = useState<Exam[]>([]);
+
+  useEffect(() => {
+    setExams(getExams());
+  }, []);
 
   const refresh = useCallback(() => {
     setExams(getExams());

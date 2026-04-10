@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Skeleton } from 'boneyard-js/react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -29,6 +28,10 @@ const supabase = createClient();
 
 function metricValue(value: number) {
   return value > 0 ? value.toLocaleString() : 'Not Set';
+}
+
+function formatDateYmd(value: string) {
+  return value.split('T')[0] ?? value;
 }
 
 export default function EmployerDashboardPage() {
@@ -84,11 +87,6 @@ export default function EmployerDashboardPage() {
     return filteredExams.slice(start, start + perPage);
   }, [activePage, filteredExams, perPage]);
 
-  const onLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
   return (
     <main className='min-h-screen bg-[#f5f6fb] px-4 py-8 text-zinc-900 sm:px-6'>
       <section className='mx-auto flex w-full max-w-350 flex-col gap-5'>
@@ -131,8 +129,8 @@ export default function EmployerDashboardPage() {
                   {exam.title}
                 </CardTitle>
                 <CardDescription className='text-xs text-[#8490ad]'>
-                  {new Date(exam.startTime).toLocaleDateString()} -{' '}
-                  {new Date(exam.endTime).toLocaleDateString()}
+                  {formatDateYmd(exam.startTime)} -{' '}
+                  {formatDateYmd(exam.endTime)}
                 </CardDescription>
               </CardHeader>
               <CardContent className='flex flex-col gap-4'>
