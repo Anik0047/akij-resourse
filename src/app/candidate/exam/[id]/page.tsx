@@ -25,7 +25,7 @@ type AnswerValue = string | string[];
 export default function CandidateExamPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { exams } = useExamStore();
+  const { exams, submitExam } = useExamStore();
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(0);
@@ -33,6 +33,9 @@ export default function CandidateExamPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isTimeOut, setIsTimeOut] = useState(false);
   const [candidateName, setCandidateName] = useState('Candidate');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const exam = useMemo(
     () => exams.find((item) => item.id === params.id),
@@ -98,6 +101,29 @@ export default function CandidateExamPage() {
     return () => window.clearTimeout(timer);
   }, [exam, isCompleted, isTimeOut, timeLeft]);
 
+  useEffect(() => {
+    if (!exam || !isTimeOut || hasSubmitted || isSubmitting) {
+      return;
+    }
+
+    const persistTimeoutSubmission = async () => {
+      setIsSubmitting(true);
+      setSubmissionError(null);
+
+      const result = await submitExam({ exam, answers });
+
+      if (!result.ok) {
+        setSubmissionError(result.message ?? 'Failed to save your answers.');
+      } else {
+        setHasSubmitted(true);
+      }
+
+      setIsSubmitting(false);
+    };
+
+    void persistTimeoutSubmission();
+  }, [answers, exam, hasSubmitted, isSubmitting, isTimeOut, submitExam]);
+
   if (!exam) return null;
 
   const question = exam.questions[activeQuestion];
@@ -129,7 +155,29 @@ export default function CandidateExamPage() {
 
   const goNextQuestion = () => {
     if (isLastQuestion) {
-      setIsCompleted(true);
+      const completeExam = async () => {
+        if (!exam || hasSubmitted || isSubmitting) {
+          setIsCompleted(true);
+          return;
+        }
+
+        setIsSubmitting(true);
+        setSubmissionError(null);
+
+        const result = await submitExam({ exam, answers });
+
+        if (!result.ok) {
+          setSubmissionError(result.message ?? 'Failed to save your answers.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        setHasSubmitted(true);
+        setIsSubmitting(false);
+        setIsCompleted(true);
+      };
+
+      void completeExam();
       return;
     }
     setActiveQuestion((prev) => prev + 1);
@@ -159,6 +207,11 @@ export default function CandidateExamPage() {
             Congratulations! {candidateName}, You have completed your{' '}
             {exam.title} exam. Thank you for participating.
           </p>
+          {submissionError ? (
+            <p className='mx-auto mt-2 max-w-3xl text-sm text-red-600'>
+              {submissionError}
+            </p>
+          ) : null}
           <Button
             type='button'
             variant='outline'
@@ -317,9 +370,13 @@ export default function CandidateExamPage() {
                 className='w-full rounded-xl bg-[#6038ef] px-7 hover:bg-[#502ed4] sm:w-auto'
                 type='button'
                 onClick={handleSaveAndContinue}
-                disabled={isTimeOut}
+                disabled={isTimeOut || isSubmitting}
               >
-                {isLastQuestion ? 'Save & Finish' : 'Save & Continue'}
+                {isLastQuestion
+                  ? isSubmitting
+                    ? 'Submitting...'
+                    : 'Save & Finish'
+                  : 'Save & Continue'}
               </Button>
             </div>
           </CardContent>
@@ -342,6 +399,16 @@ export default function CandidateExamPage() {
                 Dear {candidateName}, Your exam time has been finished. Thank
                 you for participating.
               </p>
+              {isSubmitting ? (
+                <p className='mx-auto mt-2 max-w-3xl text-sm text-slate-500'>
+                  Saving your answers...
+                </p>
+              ) : null}
+              {submissionError ? (
+                <p className='mx-auto mt-2 max-w-3xl text-sm text-red-600'>
+                  {submissionError}
+                </p>
+              ) : null}
               <Button
                 type='button'
                 variant='outline'

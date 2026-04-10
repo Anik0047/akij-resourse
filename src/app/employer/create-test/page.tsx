@@ -176,12 +176,12 @@ export default function CreateTestPage() {
     );
   };
 
-  const createTest = () => {
+  const createTest = async () => {
     if (!canContinue) {
       return;
     }
 
-    addExam({
+    const result = await addExam({
       title: basicForm.title,
       totalCandidates: basicForm.totalCandidates,
       totalSlots: basicForm.totalSlots,
@@ -194,6 +194,10 @@ export default function CreateTestPage() {
       candidates: [],
       questions,
     });
+
+    if (!result.ok) {
+      return;
+    }
 
     router.push('/employer/dashboard');
   };

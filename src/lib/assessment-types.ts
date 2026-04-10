@@ -11,6 +11,7 @@ export type Question = {
 
 export type Exam = {
   id: string;
+  employeeId?: string;
   title: string;
   totalCandidates: number;
   totalSlots: number;
