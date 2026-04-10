@@ -129,8 +129,12 @@ export function LoginForm({
                       disabled
                     />
                   </div>
-                  <Button type='button' className='w-full' disabled>
-                    Login
+                  <Button
+                    type='button'
+                    className='w-5 py-6 bg-[#6633FF]'
+                    disabled
+                  >
+                    Loginss
                   </Button>
                 </div>
               </form>
@@ -197,11 +201,15 @@ export function LoginForm({
                   />
                 </div>
                 {error && <p className='text-sm text-red-500'>{error}</p>}
-                <Button type='submit' className='w-full' disabled={isLoading}>
+                <Button
+                  type='submit'
+                  className='w-full py-6 bg-[#6633FF]'
+                  disabled={isLoading}
+                >
                   {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
               </div>
-              <div className='mt-4 text-center text-sm'>
+              <div className='mt-4 text-center text-sm py-[32px]'>
                 Don&apos;t have an account?{' '}
                 <Link
                   href='/auth/sign-up'

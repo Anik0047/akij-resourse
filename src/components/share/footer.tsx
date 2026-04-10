@@ -4,7 +4,7 @@ import { Mail, PhoneCall } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <div className='max-w-350 mx-auto w-full md:h-20 text-white flex md:items-center justify-between flex-col md:flex-row gap-4 px-4 '>
+    <div className='max-w-350 mx-auto w-full md:h-20 text-white flex md:items-center justify-between flex-col md:flex-row gap-4 px-4 p-4'>
       <div className='flex md:items-center flex-col md:flex-row gap-4'>
         <span>Powered by</span>
         <div>

@@ -2,21 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import {
-  Bold,
-  CheckCircle2,
-  Clock3,
-  Italic,
-  List,
-  Redo2,
-  Underline,
-  Undo2,
-  XCircle,
-} from 'lucide-react';
+import { Bold, Italic, List, Redo2, Underline, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExamStore } from '@/hooks/use-exam-store';
 import { createClient } from '@/lib/supabase/client';
+import Image from 'next/image';
 
 const supabase = createClient();
 
@@ -199,7 +190,25 @@ export default function CandidateExamPage() {
     return (
       <main className='min-h-screen bg-[#eceef2] p-4 sm:p-5 md:p-8'>
         <section className='mx-auto max-w-6xl rounded-2xl border border-zinc-200 bg-white px-4 py-10 text-center sm:px-6 sm:py-12 md:px-12'>
-          <CheckCircle2 className='mx-auto mb-4 size-9 text-[#2f8be6] sm:size-10' />
+          {/* <CheckCircle2 className='mx-auto mb-4 size-9 text-[#2f8be6] sm:size-10' /> */}
+          <div className='relative mx-auto mb-4 h-14 w-14'>
+            <Image
+              src='/circle.png'
+              alt='Test Completed'
+              width={56}
+              height={56}
+              className='h-full w-full object-contain'
+              priority
+            />
+            <Image
+              src='/right.png'
+              alt='Test Completed'
+              width={32}
+              height={24}
+              className='absolute left-1/2 top-1/2 h-[24.4px] w-[32.25px] -translate-x-1/2 -translate-y-[42%] object-contain'
+              priority
+            />
+          </div>
           <h2 className='text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl'>
             Test Completed
           </h2>
@@ -226,15 +235,15 @@ export default function CandidateExamPage() {
   }
 
   return (
-    <main className='min-h-screen bg-[#eceef2] p-4 sm:p-5 md:p-8'>
-      <div className='mx-auto max-w-6xl space-y-4 sm:space-y-6'>
+    <main className='min-h-screen bg-[#eceef2] px-3 pt-6 md:pt-14'>
+      <div className='mx-auto max-w-350 space-y-4 sm:space-y-6'>
         {/* top bar */}
         <div className='flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4'>
-          <p className='text-base font-semibold text-slate-700 sm:text-xl md:text-2xl'>
+          <p className='text-base font-medium text-slate-700 sm:text-xl md:text-xl'>
             Question ({activeQuestion + 1}/{exam.questions.length})
           </p>
 
-          <div className='rounded-xl bg-[#eef0f4] px-4 py-2 text-center text-base font-bold text-slate-700 sm:px-6 sm:py-3 sm:text-xl md:min-w-38 md:px-8 md:text-2xl'>
+          <div className='rounded-xl bg-[#eef0f4] px-4 py-2 text-center text-base font-medium text-slate-700 sm:px-6 sm:py-3 sm:text-xl md:min-w-38 md:px-8 md:text-xl'>
             {minutes}:{seconds} left
           </div>
         </div>
@@ -242,7 +251,7 @@ export default function CandidateExamPage() {
         {/* question card */}
         <Card className='rounded-2xl border-zinc-200'>
           <CardHeader className='px-4 pb-2 pt-4 sm:px-6 sm:pb-4 sm:pt-6'>
-            <CardTitle className='text-lg font-semibold text-slate-700 sm:text-xl md:text-2xl'>
+            <CardTitle className='text-lg font-medium text-slate-700 sm:text-xl md:text-xl'>
               Q{activeQuestion + 1}. {question?.title}
             </CardTitle>
           </CardHeader>
@@ -360,14 +369,14 @@ export default function CandidateExamPage() {
                 variant='outline'
                 type='button'
                 onClick={handleSkipQuestion}
-                className='w-full rounded-xl border-zinc-300 px-5 text-slate-700 sm:w-auto'
+                className='w-full rounded-xl border-zinc-300 px-8 py-6 text-slate-700 sm:w-auto'
                 disabled={isTimeOut}
               >
                 Skip this Question
               </Button>
 
               <Button
-                className='w-full rounded-xl bg-[#6038ef] px-7 hover:bg-[#502ed4] sm:w-auto'
+                className='w-full rounded-xl bg-[#6038ef] px-8 py-6 hover:bg-[#502ed4] sm:w-auto text-base'
                 type='button'
                 onClick={handleSaveAndContinue}
                 disabled={isTimeOut || isSubmitting}
@@ -382,37 +391,43 @@ export default function CandidateExamPage() {
           </CardContent>
         </Card>
 
-        {isTimeOut ? (
+        {!isTimeOut ? (
           <div
             style={{ position: 'fixed', inset: 0, zIndex: 40 }}
             className='flex items-center justify-center bg-black/40 px-4'
           >
             <section className='w-full max-w-4xl rounded-2xl bg-white px-5 py-10 text-center shadow-2xl sm:px-8 sm:py-12'>
-              <div className='mx-auto mb-4 flex items-center justify-center gap-1'>
-                <Clock3 className='size-8 text-[#326990] sm:size-9' />
-                {/* <XCircle className='size-5 text-[#eb5360] sm:size-6' /> */}
+              <div className='mx-auto mb-4 h-[56px] w-[56px]'>
+                <Image
+                  src='/time-out.png'
+                  alt='Timeout'
+                  width={500}
+                  height={500}
+                  className='h-[56px] w-[56px] object-contain'
+                  priority
+                />
               </div>
-              <h2 className='text-2xl font-bold text-slate-800 sm:text-3xl'>
+              <h2 className='text-xl font-semibold text-slate-800 sm:text-3xl'>
                 Timeout!
               </h2>
-              <p className='mx-auto mt-3 max-w-3xl text-sm text-slate-500'>
+              <p className='mx-auto mt-3 max-w-3xl text-base text-[#64748B]'>
                 Dear {candidateName}, Your exam time has been finished. Thank
                 you for participating.
               </p>
-              {isSubmitting ? (
+              {/* {isSubmitting ? (
                 <p className='mx-auto mt-2 max-w-3xl text-sm text-slate-500'>
                   Saving your answers...
                 </p>
-              ) : null}
-              {submissionError ? (
+              ) : null} */}
+              {/* {submissionError ? (
                 <p className='mx-auto mt-2 max-w-3xl text-sm text-red-600'>
                   {submissionError}
                 </p>
-              ) : null}
+              ) : null} */}
               <Button
                 type='button'
                 variant='outline'
-                className='mt-6 rounded-lg border-zinc-300 px-6 text-slate-700 sm:px-8'
+                className='mt-6 rounded-lg border-zinc-300 px-[32px] py-6 text-slate-700 sm:px-8'
                 onClick={handleBackToDashboard}
               >
                 Back to Dashboard

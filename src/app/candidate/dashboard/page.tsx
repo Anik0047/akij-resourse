@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useExamStore } from '@/hooks/use-exam-store';
 import { createClient } from '@/lib/supabase/client';
+import Image from 'next/image';
 
 const supabase = createClient();
 const PAGE_SIZE_OPTIONS = [8, 16, 24];
@@ -59,16 +60,16 @@ export default function CandidateDashboardPage() {
   const paginated = filtered.slice((page - 1) * perPage, page * perPage);
 
   return (
-    <main className='min-h-screen bg-[#f4f4f6] px-6 py-10 text-zinc-900'>
+    <main className='min-h-screen bg-[#f4f4f6]  py-10 text-zinc-900'>
       <section className='max-w-350 mx-auto flex w-full flex-col gap-6 px-4'>
         {/* Header row: title + search + logout */}
         <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-          <h1 className='text-xl font-semibold tracking-tight text-zinc-900'>
+          <h1 className='text-2xl font-bold tracking-tight text-[#334155]'>
             Online Tests
           </h1>
-          <div className='flex w-[621px] h-[48px] items-center gap-3'>
+          <div className='flex md:w-[621px] md:h-[50px] items-center gap-3'>
             {/* Search */}
-            <div className='relative flex-1 sm:max-w-xl]'>
+            <div className='relative flex-1 sm:max-w-xl'>
               <input
                 type='text'
                 placeholder='Search by exam title'
@@ -77,11 +78,15 @@ export default function CandidateDashboardPage() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className='w-full rounded-md border border-violet-300 bg-white py-2 pl-4 pr-10 text-sm text-zinc-700 placeholder-zinc-400 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400'
+                className='w-full rounded-md border border-violet-300 bg-white py-2 pl-4 pr-10 text-sm text-zinc-700 placeholder-[#7C8493] outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-400  md:h-[48px]'
               />
-              <Search
-                size={16}
-                className='absolute right-3 top-1/2 -translate-y-1/2 text-violet-500'
+
+              <Image
+                src='/search-icon.png'
+                alt='Search'
+                width={100}
+                height={100}
+                className='w-7 h-7 md:w-[32px] md:h-[32px] absolute right-3 top-1/2 -translate-y-1/2 text-violet-500'
               />
             </div>
             {/* <Button
@@ -105,7 +110,7 @@ export default function CandidateDashboardPage() {
             {paginated.map((exam) => (
               <div
                 key={exam.id}
-                className='flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm transition hover:shadow-md'
+                className='flex flex-col gap-4 rounded-xl border border-[#E5E7EB] bg-white p-6 shadow-sm transition hover:shadow-md'
               >
                 <div>
                   <h2 className='text-xl font-semibold text-zinc-900 leading-snug'>

@@ -319,7 +319,13 @@ export default function EmployerDashboardPage() {
               placeholder='Search by exam title'
               className='h-10 rounded-xl border-[#cbcfe6] bg-white pr-10 text-sm'
             />
-            <Search className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#7f87a8]' />
+            <Image
+              src='/search-icon.png'
+              alt='Search'
+              width={100}
+              height={100}
+              className='w-7 h-7 md:w-[32px] md:h-[32px] absolute right-3 top-1/2 -translate-y-1/2 text-violet-500'
+            />
           </div>
 
           <div className='flex items-center justify-end gap-2'>

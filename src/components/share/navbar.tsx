@@ -92,67 +92,77 @@ const Navbar = () => {
   };
 
   return (
-    <nav className='h-16 sm:h-20 px-4 max-w-350 mx-auto w-full flex items-center justify-between'>
+    <nav
+      className={`h-16 sm:h-20 px-4 max-w-350 mx-auto w-full grid grid-cols-12 content-center`}
+    >
       {/* LEFT */}
-      <div className='flex items-center gap-6 flex-1'>
+      <div
+        className={`${user ? 'col-span-2' : 'col-span-3 md:col-span-4'}  flex items-center gap-6`}
+      >
         <Image
           src='/logo.png'
           alt='Logo'
           width={120}
           height={40}
-          className='h-6 w-auto md:h-8'
+          className='w-[47px] h-[13px] md:h-8 md:w-auto'
         />
+      </div>
 
-        {/* show dashboard only if logged in */}
+      {/* show dashboard only if logged in */}
+      <div className='col-span-1 md:flex justify-center mt-auto hidden'>
         {user && <span className='font-medium cursor-pointer'>Dashboard</span>}
       </div>
 
       {/* CENTER (only when not logged in) */}
       {!user && (
-        <h1 className='text-[14px] sm:text-2xl font-semibold'>Akij Resource</h1>
+        <h1 className='text-[14px] sm:text-2xl font-semibold col-span-5 md:col-span-7'>
+          Akij Resource
+        </h1>
       )}
 
       {/* RIGHT USER INFO */}
       {user && (
-        <div className='relative'>
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className='flex items-center gap-3 hover:opacity-80 transition-opacity'
-          >
-            <div className='w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center'>
-              👤
-            </div>
-
-            <div className='text-right leading-tight'>
-              <p className='font-medium text-sm'>
-                {profile?.email || user.email}
-              </p>
-              <p className='text-xs text-gray-500'>
-                Ref. ID - {(profile?.id || user.id).slice(0, 8)}
-              </p>
-            </div>
-
-            <span
-              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+        <div className='col-span-9 flex justify-end'>
+          <div className={`relative`}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className='flex items-center gap-3 hover:opacity-80 transition-opacity'
             >
-              ▾
-            </span>
-          </button>
+              <div className='w-6 h-6 md:w-9 md:h-9 rounded-full bg-gray-200 flex items-center justify-center'>
+                👤
+              </div>
 
-          {isDropdownOpen && (
-            <div
-              ref={dropdownRef}
-              className='absolute right-0 mt-2 w-48 rounded-lg border border-zinc-200 bg-white shadow-lg z-50'
-            >
-              <button
-                onClick={handleLogout}
-                className='w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+              <div className='text-right leading-tight hidden md:block'>
+                <p className='font-medium text-sm'>
+                  {profile?.email || user.email}
+                </p>
+                <p className='text-xs text-gray-500'>
+                  Ref. ID - {(profile?.id || user.id).slice(0, 8)}
+                </p>
+              </div>
+
+              <span
+                className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
               >
-                <LogOut className='size-4' />
-                Logout
-              </button>
-            </div>
-          )}
+                ▾
+              </span>
+            </button>
+
+            {isDropdownOpen && (
+              <div
+                ref={dropdownRef}
+                className='absolute right-0 mt-2 w-48 rounded-lg border border-zinc-200 bg-white shadow-lg z-50'
+              >
+                <button
+                  onClick={handleLogout}
+                  className='w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors'
+                >
+                  <LogOut className='size-4' />
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </nav>

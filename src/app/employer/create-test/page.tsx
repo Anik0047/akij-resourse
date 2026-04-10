@@ -235,7 +235,7 @@ export default function CreateTestPage() {
 
   return (
     <main className='min-h-screen bg-[#f4f5f9] px-4 py-8 text-zinc-900 sm:px-6'>
-      <section className='mx-auto flex w-full max-w-7xl flex-col gap-6'>
+      <section className='mx-auto flex w-full max-w-350 flex-col gap-6'>
         <header className='rounded-2xl border border-[#d7dbe6] bg-[#f7f8fc] px-6 py-5'>
           <div className='flex flex-col gap-5 md:flex-row md:items-center md:justify-between'>
             <div>
@@ -255,7 +255,7 @@ export default function CreateTestPage() {
                   </span>
                 </div>
 
-                <span className='h-px w-10 bg-[#9aa5bf]' />
+                <span className='h-px w-15 bg-[#9aa5bf]' />
 
                 <div className='flex items-center gap-2'>
                   <span
@@ -284,7 +284,7 @@ export default function CreateTestPage() {
 
         {step === 1 ? (
           <>
-            <div className='mx-auto w-full max-w-4xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5 sm:p-6'>
+            <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5 sm:p-6'>
               <h2 className='text-[28px] font-semibold text-[#2f3d56]'>
                 Basic Information
               </h2>
@@ -474,7 +474,7 @@ export default function CreateTestPage() {
               </div>
             </div>
 
-            <div className='mx-auto w-full max-w-4xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5'>
+            <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5'>
               <div className='flex items-center justify-between'>
                 <Button
                   variant='outline'
