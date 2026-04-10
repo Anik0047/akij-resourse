@@ -2,12 +2,25 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import {
+  Bold,
+  CheckCircle2,
+  Clock3,
+  Italic,
+  List,
+  Redo2,
+  Underline,
+  Undo2,
+  XCircle,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExamStore } from '@/hooks/use-exam-store';
 import { createClient } from '@/lib/supabase/client';
 
 const supabase = createClient();
+
+type AnswerValue = string | string[];
 
 export default function CandidateExamPage() {
   const router = useRouter();
@@ -16,7 +29,10 @@ export default function CandidateExamPage() {
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isTimeOut, setIsTimeOut] = useState(false);
+  const [candidateName, setCandidateName] = useState('Candidate');
 
   const exam = useMemo(
     () => exams.find((item) => item.id === params.id),
@@ -25,133 +41,318 @@ export default function CandidateExamPage() {
 
   useEffect(() => {
     const ensureAuthenticated = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) router.replace('/auth/login');
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error || !data.user) {
+        router.replace('/auth/login');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, full_name, email')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profile?.role && profile.role !== 'candidate') {
+        await supabase.auth.signOut();
+        router.replace('/auth/login');
+        return;
+      }
+
+      const displayName =
+        profile?.full_name || profile?.email || data.user.email || 'Candidate';
+      setCandidateName(displayName);
     };
 
-    ensureAuthenticated();
+    void ensureAuthenticated();
   }, [router]);
 
   useEffect(() => {
     if (!exam) return;
 
     const initTimer = window.setTimeout(() => {
-      setTimeLeft((prev) => (prev > 0 ? prev : (exam.duration ?? 0) * 60));
+      setTimeLeft((exam.duration ?? 0) * 60);
+      setActiveQuestion(0);
+      setAnswers({});
+      setIsCompleted(false);
+      setIsTimeOut(false);
     }, 0);
 
     return () => window.clearTimeout(initTimer);
   }, [exam]);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (!exam || isCompleted || isTimeOut || timeLeft <= 0) return;
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
+    const timer = window.setTimeout(() => {
+      if (timeLeft <= 1) {
+        setTimeLeft(0);
+        setIsTimeOut(true);
+        return;
+      }
+
+      setTimeLeft(timeLeft - 1);
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [timeLeft]);
+    return () => window.clearTimeout(timer);
+  }, [exam, isCompleted, isTimeOut, timeLeft]);
 
   if (!exam) return null;
 
   const question = exam.questions[activeQuestion];
   const isLastQuestion = activeQuestion === exam.questions.length - 1;
-  const selectedAnswer = question ? answers[question.id] : '';
+  const selectedAnswer = question ? answers[question.id] : undefined;
+
+  const saveTextAnswer = (value: string) => {
+    if (!question) return;
+    setAnswers((prev) => ({ ...prev, [question.id]: value }));
+  };
+
+  const saveRadioAnswer = (value: string) => {
+    if (!question) return;
+    setAnswers((prev) => ({ ...prev, [question.id]: value }));
+  };
+
+  const saveCheckboxAnswer = (value: string, checked: boolean) => {
+    if (!question) return;
+    setAnswers((prev) => {
+      const current = Array.isArray(prev[question.id])
+        ? (prev[question.id] as string[])
+        : [];
+      const next = checked
+        ? [...current, value]
+        : current.filter((item) => item !== value);
+      return { ...prev, [question.id]: next };
+    });
+  };
 
   const goNextQuestion = () => {
     if (isLastQuestion) {
-      router.push('/candidate/dashboard');
+      setIsCompleted(true);
       return;
     }
-
     setActiveQuestion((prev) => prev + 1);
   };
 
-  const handleSkipQuestion = () => {
-    goNextQuestion();
-  };
-
+  const handleSkipQuestion = () => goNextQuestion();
   const handleSaveAndContinue = () => {
     if (!question) return;
     goNextQuestion();
   };
+  const handleBackToDashboard = () => router.push('/candidate/dashboard');
 
   const minutes = Math.floor(timeLeft / 60)
     .toString()
     .padStart(2, '0');
-
   const seconds = (timeLeft % 60).toString().padStart(2, '0');
 
+  if (isCompleted) {
+    return (
+      <main className='min-h-screen bg-[#eceef2] p-4 sm:p-5 md:p-8'>
+        <section className='mx-auto max-w-6xl rounded-2xl border border-zinc-200 bg-white px-4 py-10 text-center sm:px-6 sm:py-12 md:px-12'>
+          <CheckCircle2 className='mx-auto mb-4 size-9 text-[#2f8be6] sm:size-10' />
+          <h2 className='text-2xl font-bold tracking-tight text-slate-800 sm:text-3xl'>
+            Test Completed
+          </h2>
+          <p className='mx-auto mt-3 max-w-4xl text-sm text-slate-500'>
+            Congratulations! {candidateName}, You have completed your{' '}
+            {exam.title} exam. Thank you for participating.
+          </p>
+          <Button
+            type='button'
+            variant='outline'
+            className='mt-6 rounded-lg border-zinc-300 px-6 text-slate-700 sm:px-8'
+            onClick={handleBackToDashboard}
+          >
+            Back to Dashboard
+          </Button>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className='min-h-screen bg-[#f8fafc] p-6'>
-      <div className='max-w-4xl mx-auto space-y-6'>
+    <main className='min-h-screen bg-[#eceef2] p-4 sm:p-5 md:p-8'>
+      <div className='mx-auto max-w-6xl space-y-4 sm:space-y-6'>
         {/* top bar */}
-        <div className='flex items-center justify-between bg-white border rounded-xl px-6 py-4'>
-          <p className='text-sm font-medium text-gray-600'>
+        <div className='flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4'>
+          <p className='text-base font-semibold text-slate-700 sm:text-xl md:text-2xl'>
             Question ({activeQuestion + 1}/{exam.questions.length})
           </p>
 
-          <div className='bg-gray-100 px-4 py-2 rounded-lg text-sm font-semibold'>
+          <div className='rounded-xl bg-[#eef0f4] px-4 py-2 text-center text-base font-bold text-slate-700 sm:px-6 sm:py-3 sm:text-xl md:min-w-38 md:px-8 md:text-2xl'>
             {minutes}:{seconds} left
           </div>
         </div>
 
         {/* question card */}
-        <Card className='rounded-xl'>
-          <CardHeader>
-            <CardTitle className='text-base font-semibold'>
+        <Card className='rounded-2xl border-zinc-200'>
+          <CardHeader className='px-4 pb-2 pt-4 sm:px-6 sm:pb-4 sm:pt-6'>
+            <CardTitle className='text-lg font-semibold text-slate-700 sm:text-xl md:text-2xl'>
               Q{activeQuestion + 1}. {question?.title}
             </CardTitle>
           </CardHeader>
 
-          <CardContent className='space-y-3'>
-            {question?.options.map((option: string) => (
-              <label
-                key={option}
-                className='flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-50'
-              >
-                <input
-                  type='radio'
-                  name={`q-${question.id}`}
-                  className='w-4 h-4'
-                  checked={selectedAnswer === option}
-                  onChange={() =>
-                    setAnswers((prev) => ({
-                      ...prev,
-                      [question.id]: option,
-                    }))
+          <CardContent className='space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6'>
+            {question?.type === 'text' ? (
+              <div className='overflow-hidden rounded-xl border border-zinc-200'>
+                <div className='flex flex-wrap items-center gap-1.5 border-b border-zinc-200 px-3 py-2 text-slate-600 sm:gap-2 sm:px-4 sm:py-3'>
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <Undo2 className='size-3.5 sm:size-4' />
+                  </button>
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <Redo2 className='size-3.5 sm:size-4' />
+                  </button>
+                  <span className='mx-0.5 h-4 w-px bg-zinc-200 sm:mx-1' />
+                  <button
+                    type='button'
+                    className='rounded px-1.5 py-1 text-xs hover:bg-zinc-100 sm:px-2'
+                  >
+                    Normal text
+                  </button>
+                  <span className='mx-0.5 h-4 w-px bg-zinc-200 sm:mx-1' />
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <List className='size-3.5 sm:size-4' />
+                  </button>
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <Bold className='size-3.5 sm:size-4' />
+                  </button>
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <Italic className='size-3.5 sm:size-4' />
+                  </button>
+                  <button
+                    type='button'
+                    className='rounded p-1 hover:bg-zinc-100'
+                  >
+                    <Underline className='size-3.5 sm:size-4' />
+                  </button>
+                </div>
+                <textarea
+                  className='min-h-40 w-full resize-none bg-white px-3 py-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 sm:min-h-56 sm:px-4 sm:py-4'
+                  placeholder='Type questions here..'
+                  value={
+                    typeof selectedAnswer === 'string' ? selectedAnswer : ''
                   }
+                  onChange={(e) => saveTextAnswer(e.target.value)}
                 />
-                <span className='text-sm'>{option}</span>
-              </label>
-            ))}
+              </div>
+            ) : null}
+
+            {question?.type === 'radio'
+              ? question.options.map((option: string) => (
+                  <label
+                    key={option}
+                    className='flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 hover:bg-zinc-50 sm:px-4 sm:py-3'
+                  >
+                    <input
+                      type='radio'
+                      name={`q-${question.id}`}
+                      className='size-4 shrink-0'
+                      checked={selectedAnswer === option}
+                      onChange={() => saveRadioAnswer(option)}
+                    />
+                    <span className='text-base text-slate-600 sm:text-lg'>
+                      {option}
+                    </span>
+                  </label>
+                ))
+              : null}
+
+            {question?.type === 'checkbox'
+              ? question.options.map((option: string) => {
+                  const checked =
+                    Array.isArray(selectedAnswer) &&
+                    selectedAnswer.includes(option);
+
+                  return (
+                    <label
+                      key={option}
+                      className='flex cursor-pointer items-center gap-3 rounded-lg border border-zinc-200 px-3 py-2.5 hover:bg-zinc-50 sm:px-4 sm:py-3'
+                    >
+                      <input
+                        type='checkbox'
+                        className='size-4 shrink-0'
+                        checked={checked}
+                        onChange={(e) =>
+                          saveCheckboxAnswer(option, e.currentTarget.checked)
+                        }
+                      />
+                      <span className='text-base text-slate-600 sm:text-lg'>
+                        {option}
+                      </span>
+                    </label>
+                  );
+                })
+              : null}
 
             {/* footer buttons */}
-            <div className='flex items-center justify-between pt-4'>
+            <div className='flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between sm:pt-4'>
               <Button
                 variant='outline'
                 type='button'
                 onClick={handleSkipQuestion}
+                className='w-full rounded-xl border-zinc-300 px-5 text-slate-700 sm:w-auto'
+                disabled={isTimeOut}
               >
                 Skip this Question
               </Button>
 
               <Button
-                className='bg-purple-600 hover:bg-purple-700'
+                className='w-full rounded-xl bg-[#6038ef] px-7 hover:bg-[#502ed4] sm:w-auto'
                 type='button'
                 onClick={handleSaveAndContinue}
+                disabled={isTimeOut}
               >
                 {isLastQuestion ? 'Save & Finish' : 'Save & Continue'}
               </Button>
             </div>
           </CardContent>
         </Card>
+
+        {isTimeOut ? (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 40 }}
+            className='flex items-center justify-center bg-black/40 px-4'
+          >
+            <section className='w-full max-w-4xl rounded-2xl bg-white px-5 py-10 text-center shadow-2xl sm:px-8 sm:py-12'>
+              <div className='mx-auto mb-4 flex items-center justify-center gap-1'>
+                <Clock3 className='size-8 text-[#326990] sm:size-9' />
+                {/* <XCircle className='size-5 text-[#eb5360] sm:size-6' /> */}
+              </div>
+              <h2 className='text-2xl font-bold text-slate-800 sm:text-3xl'>
+                Timeout!
+              </h2>
+              <p className='mx-auto mt-3 max-w-3xl text-sm text-slate-500'>
+                Dear {candidateName}, Your exam time has been finished. Thank
+                you for participating.
+              </p>
+              <Button
+                type='button'
+                variant='outline'
+                className='mt-6 rounded-lg border-zinc-300 px-6 text-slate-700 sm:px-8'
+                onClick={handleBackToDashboard}
+              >
+                Back to Dashboard
+              </Button>
+            </section>
+          </div>
+        ) : null}
       </div>
     </main>
   );

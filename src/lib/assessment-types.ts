@@ -5,6 +5,7 @@ export type Question = {
   title: string;
   type: QuestionType;
   options: string[];
+  correctAnswers?: string[];
 };
 
 export type Exam = {

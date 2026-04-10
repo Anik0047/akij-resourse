@@ -74,6 +74,8 @@ export function LoginForm({
         throw new Error('Selected role does not match your account role.');
       }
 
+      router.refresh();
+
       if (role === 'candidate') {
         router.push('/candidate/dashboard');
         return;

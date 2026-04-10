@@ -18,7 +18,7 @@ const seededExams: Exam[] = [
     questionType: 'radio',
     startTime: '2026-04-12T10:00',
     endTime: '2026-04-12T12:00',
-    duration: 30,
+    duration: 1,
     negativeMarking: 0.25,
     candidates: [
       'maria@candidate.com',
@@ -55,7 +55,7 @@ const seededExams: Exam[] = [
     questionType: 'text',
     startTime: '2026-04-13T15:00',
     endTime: '2026-04-13T17:00',
-    duration: 45,
+    duration: 1,
     negativeMarking: 0,
     candidates: ['anik@candidate.com', 'sajid@candidate.com'],
     questions: [

@@ -31,7 +31,7 @@ export default function RootLayout({
       lang='en'
       className={`${dmSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className='min-h-screen flex flex-col bg-[#fdfbf8]'>
+      <body className='min-h-screen flex flex-col bg-[#f4f4f6]'>
         <BonesProvider />
         <div className='w-full bg-white border-b border-zinc-100'>
           <Navbar />
