@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { create } from 'zustand';
 import { createClient } from '@/lib/supabase/client';
 import {
   type Exam,
@@ -126,14 +127,23 @@ function calculateQuestionScore(
   };
 }
 
-export function useExamStore() {
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type ExamStore = {
+  exams: Exam[];
+  isLoading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  addExam: (exam: Omit<Exam, 'id' | 'employeeId'>) => Promise<{ ok: boolean }>;
+  submitExam: (input: SubmitExamInput) => Promise<{
+    ok: boolean;
+    message?: string;
+    score?: number;
+    maxScore?: number;
+  }>;
+};
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+const useExamStoreBase = create<ExamStore>()((set) => {
+  const refresh = async () => {
+    set({ isLoading: true, error: null });
 
     const { data, error: fetchError } = await supabase
       .from('online_tests')
@@ -164,9 +174,7 @@ export function useExamStore() {
       .order('created_at', { ascending: false });
 
     if (fetchError) {
-      setError(fetchError.message);
-      setExams([]);
-      setIsLoading(false);
+      set({ exams: [], error: fetchError.message, isLoading: false });
       return;
     }
 
@@ -174,86 +182,77 @@ export function useExamStore() {
       .filter((item) => Boolean(item) && typeof item === 'object')
       .map((item) => toExam(item as Record<string, unknown>));
 
-    setExams(nextExams);
-    setIsLoading(false);
-  }, []);
+    set({ exams: nextExams, isLoading: false });
+  };
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const addExam: ExamStore['addExam'] = async (exam) => {
+    set({ error: null });
 
-  const addExam = useCallback(
-    async (exam: Omit<Exam, 'id' | 'employeeId'>) => {
-      setError(null);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      set({ error: 'You need to be logged in as an employer.' });
+      return { ok: false };
+    }
 
-      const { data: authData, error: authError } =
-        await supabase.auth.getUser();
-      if (authError || !authData.user) {
-        setError('You need to be logged in as an employer.');
+    const { error: employeeUpsertError } = await supabase
+      .from('employees')
+      .upsert({ id: authData.user.id }, { onConflict: 'id' });
+
+    if (employeeUpsertError) {
+      set({ error: employeeUpsertError.message });
+      return { ok: false };
+    }
+
+    const { data: insertedTest, error: insertTestError } = await supabase
+      .from('online_tests')
+      .insert({
+        employee_id: authData.user.id,
+        title: exam.title,
+        total_candidates: exam.totalCandidates,
+        total_slots: exam.totalSlots,
+        question_sets: exam.questionSets,
+        question_type: exam.questionType,
+        start_time: new Date(exam.startTime).toISOString(),
+        end_time: new Date(exam.endTime).toISOString(),
+        duration_minutes: exam.duration,
+        negative_marking: exam.negativeMarking,
+        candidates: exam.candidates,
+      })
+      .select('id')
+      .single();
+
+    if (insertTestError || !insertedTest) {
+      set({ error: insertTestError?.message ?? 'Failed to create test.' });
+      return { ok: false };
+    }
+
+    if (exam.questions.length > 0) {
+      const questionRows = exam.questions.map((question) => ({
+        employee_id: authData.user.id,
+        exam_id: insertedTest.id,
+        title: question.title,
+        question_type: question.type,
+        options: question.options,
+        correct_answer: question.correctAnswers ?? [],
+        points: question.points ?? 1,
+      }));
+
+      const { error: insertQuestionsError } = await supabase
+        .from('questions')
+        .insert(questionRows);
+
+      if (insertQuestionsError) {
+        set({ error: insertQuestionsError.message });
         return { ok: false };
       }
+    }
 
-      const { error: employeeUpsertError } = await supabase
-        .from('employees')
-        .upsert({ id: authData.user.id }, { onConflict: 'id' });
+    await refresh();
+    return { ok: true };
+  };
 
-      if (employeeUpsertError) {
-        setError(employeeUpsertError.message);
-        return { ok: false };
-      }
-
-      const { data: insertedTest, error: insertTestError } = await supabase
-        .from('online_tests')
-        .insert({
-          employee_id: authData.user.id,
-          title: exam.title,
-          total_candidates: exam.totalCandidates,
-          total_slots: exam.totalSlots,
-          question_sets: exam.questionSets,
-          question_type: exam.questionType,
-          start_time: new Date(exam.startTime).toISOString(),
-          end_time: new Date(exam.endTime).toISOString(),
-          duration_minutes: exam.duration,
-          negative_marking: exam.negativeMarking,
-          candidates: exam.candidates,
-        })
-        .select('id')
-        .single();
-
-      if (insertTestError || !insertedTest) {
-        setError(insertTestError?.message ?? 'Failed to create test.');
-        return { ok: false };
-      }
-
-      if (exam.questions.length > 0) {
-        const questionRows = exam.questions.map((question) => ({
-          employee_id: authData.user.id,
-          exam_id: insertedTest.id,
-          title: question.title,
-          question_type: question.type,
-          options: question.options,
-          correct_answer: question.correctAnswers ?? [],
-          points: question.points ?? 1,
-        }));
-
-        const { error: insertQuestionsError } = await supabase
-          .from('questions')
-          .insert(questionRows);
-
-        if (insertQuestionsError) {
-          setError(insertQuestionsError.message);
-          return { ok: false };
-        }
-      }
-
-      await refresh();
-      return { ok: true };
-    },
-    [refresh],
-  );
-
-  const submitExam = useCallback(async ({ exam, answers }: SubmitExamInput) => {
-    setError(null);
+  const submitExam: ExamStore['submitExam'] = async ({ exam, answers }) => {
+    set({ error: null });
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError || !authData.user) {
@@ -345,7 +344,24 @@ export function useExamStore() {
       score: clampedScore,
       maxScore,
     };
-  }, []);
+  };
 
-  return { exams, isLoading, error, refresh, addExam, submitExam };
+  return {
+    exams: [],
+    isLoading: true,
+    error: null,
+    refresh,
+    addExam,
+    submitExam,
+  };
+});
+
+export function useExamStore() {
+  const store = useExamStoreBase();
+
+  useEffect(() => {
+    void store.refresh();
+  }, [store.refresh]);
+
+  return store;
 }

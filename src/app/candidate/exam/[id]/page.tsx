@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Bold, Italic, List, Redo2, Underline, Undo2 } from 'lucide-react';
+import { Skeleton } from 'boneyard-js/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExamStore } from '@/hooks/use-exam-store';
@@ -16,7 +17,7 @@ type AnswerValue = string | string[];
 export default function CandidateExamPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const { exams, submitExam } = useExamStore();
+  const { exams, submitExam, isLoading } = useExamStore();
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(0);
@@ -32,6 +33,7 @@ export default function CandidateExamPage() {
     () => exams.find((item) => item.id === params.id),
     [exams, params.id],
   );
+  const showLoadingSkeleton = isLoading && !exam;
 
   useEffect(() => {
     const ensureAuthenticated = async () => {
@@ -114,6 +116,58 @@ export default function CandidateExamPage() {
 
     void persistTimeoutSubmission();
   }, [answers, exam, hasSubmitted, isSubmitting, isTimeOut, submitExam]);
+
+  const skeletonFallback = (
+    <main className='min-h-screen bg-[#eceef2] px-3 pt-6 md:pt-14'>
+      <div className='mx-auto max-w-350 space-y-4 sm:space-y-6'>
+        <div className='flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4'>
+          <div className='h-6 w-56 rounded bg-zinc-200/80' />
+          <div className='h-12 w-28 rounded-xl bg-zinc-200/80' />
+        </div>
+
+        <Card className='rounded-2xl border-zinc-200'>
+          <CardHeader className='px-4 pb-2 pt-4 sm:px-6 sm:pb-4 sm:pt-6'>
+            <div className='h-6 w-3/4 rounded bg-zinc-200/80' />
+          </CardHeader>
+
+          <CardContent className='space-y-3 px-4 pb-4 sm:space-y-4 sm:px-6 sm:pb-6'>
+            <div className='overflow-hidden rounded-xl border border-zinc-200'>
+              <div className='flex items-center gap-2 border-b border-zinc-200 px-3 py-2 sm:px-4 sm:py-3'>
+                <div className='h-4 w-4 rounded bg-zinc-200/80' />
+                <div className='h-4 w-4 rounded bg-zinc-200/80' />
+                <div className='h-4 w-24 rounded bg-zinc-200/80' />
+                <div className='h-4 w-4 rounded bg-zinc-200/80' />
+                <div className='h-4 w-4 rounded bg-zinc-200/80' />
+              </div>
+              <div className='space-y-3 px-3 py-3 sm:px-4 sm:py-4'>
+                <div className='h-12 w-full rounded-lg bg-zinc-200/80' />
+                <div className='h-12 w-full rounded-lg bg-zinc-200/80' />
+                <div className='h-12 w-full rounded-lg bg-zinc-200/80' />
+              </div>
+            </div>
+
+            <div className='flex flex-col gap-3 pt-3 sm:flex-row sm:items-center sm:justify-between sm:pt-4'>
+              <div className='h-12 w-full rounded-xl bg-zinc-200/80 sm:w-44' />
+              <div className='h-12 w-full rounded-xl bg-zinc-200/80 sm:w-48' />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
+  );
+
+  if (showLoadingSkeleton) {
+    return (
+      <Skeleton
+        name='candidate-exam'
+        loading
+        fallback={skeletonFallback}
+        fixture={skeletonFallback}
+      >
+        <div />
+      </Skeleton>
+    );
+  }
 
   if (!exam) return null;
 
@@ -391,19 +445,19 @@ export default function CandidateExamPage() {
           </CardContent>
         </Card>
 
-        {!isTimeOut ? (
+        {isTimeOut ? (
           <div
             style={{ position: 'fixed', inset: 0, zIndex: 40 }}
             className='flex items-center justify-center bg-black/40 px-4'
           >
             <section className='w-full max-w-4xl rounded-2xl bg-white px-5 py-10 text-center shadow-2xl sm:px-8 sm:py-12'>
-              <div className='mx-auto mb-4 h-[56px] w-[56px]'>
+              <div className='mx-auto mb-4 h-14 w-14'>
                 <Image
                   src='/time-out.png'
                   alt='Timeout'
                   width={500}
                   height={500}
-                  className='h-[56px] w-[56px] object-contain'
+                  className='h-14 w-14 object-contain'
                   priority
                 />
               </div>
@@ -427,7 +481,7 @@ export default function CandidateExamPage() {
               <Button
                 type='button'
                 variant='outline'
-                className='mt-6 rounded-lg border-zinc-300 px-[32px] py-6 text-slate-700 sm:px-8'
+                className='mt-6 rounded-lg border-zinc-300 px-8 py-6 text-slate-700 sm:px-8'
                 onClick={handleBackToDashboard}
               >
                 Back to Dashboard

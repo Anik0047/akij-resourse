@@ -57,6 +57,7 @@ export default function CreateTestPage() {
   const router = useRouter();
   const { addExam } = useExamStore();
   const [step, setStep] = useState<1 | 2>(1);
+  const [showBasicInfoReview, setShowBasicInfoReview] = useState(false);
   const [basicForm, setBasicForm] = useState<BasicForm>(initialBasicForm);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [draftQuestion, setDraftQuestion] =
@@ -206,6 +207,24 @@ export default function CreateTestPage() {
   const inputClass =
     'h-11 rounded-xl border-[#d9dde7] bg-[#fdfdff] text-[#344054] placeholder:text-[#97a1ba]';
 
+  const formatDateLabel = (value: string) => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString();
+  };
+
+  const formatTimeLabel = (value: string) => {
+    if (!value) return '-';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
   const getQuestionTypeLabel = (type: QuestionType) => {
     if (type === 'radio') return 'MCQ';
     if (type === 'checkbox') return 'Checkbox';
@@ -284,215 +303,321 @@ export default function CreateTestPage() {
 
         {step === 1 ? (
           <>
-            <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5 sm:p-6'>
-              <h2 className='text-[28px] font-semibold text-[#2f3d56]'>
-                Basic Information
-              </h2>
+            {!showBasicInfoReview ? (
+              <>
+                <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5 sm:p-6'>
+                  <h2 className='text-[28px] font-semibold text-[#2f3d56]'>
+                    Basic Information
+                  </h2>
 
-              <div className='mt-5 grid gap-5 md:grid-cols-2'>
-                <div className='flex flex-col gap-2 md:col-span-2'>
-                  <Label htmlFor='title' className={fieldLabelClass}>
-                    Online Test Title <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <Input
-                    id='title'
-                    value={basicForm.title}
-                    onChange={(event) =>
-                      setBasicForm((prev) => ({
-                        ...prev,
-                        title: event.target.value,
-                      }))
-                    }
-                    className={inputClass}
-                    placeholder='Enter online test title'
-                  />
+                  <div className='mt-5 grid gap-5 md:grid-cols-2'>
+                    <div className='flex flex-col gap-2 md:col-span-2'>
+                      <Label htmlFor='title' className={fieldLabelClass}>
+                        Online Test Title{' '}
+                        <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <Input
+                        id='title'
+                        value={basicForm.title}
+                        onChange={(event) =>
+                          setBasicForm((prev) => ({
+                            ...prev,
+                            title: event.target.value,
+                          }))
+                        }
+                        className={inputClass}
+                        placeholder='Enter online test title'
+                      />
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label htmlFor='candidates' className={fieldLabelClass}>
+                        Total Candidates{' '}
+                        <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <Input
+                        id='candidates'
+                        type='number'
+                        min={1}
+                        value={basicForm.totalCandidates}
+                        onChange={(event) =>
+                          setBasicForm((prev) => ({
+                            ...prev,
+                            totalCandidates: Number(event.target.value),
+                          }))
+                        }
+                        className={inputClass}
+                        placeholder='Enter total candidates'
+                      />
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label htmlFor='slots' className={fieldLabelClass}>
+                        Total Slots <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <div className='relative'>
+                        <select
+                          id='slots'
+                          value={basicForm.totalSlots}
+                          onChange={(event) =>
+                            setBasicForm((prev) => ({
+                              ...prev,
+                              totalSlots: Number(event.target.value),
+                            }))
+                          }
+                          className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+                        >
+                          {Array.from({ length: 10 }).map((_, index) => {
+                            const value = index + 1;
+                            return (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      </div>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label
+                        htmlFor='question-sets'
+                        className={fieldLabelClass}
+                      >
+                        Total Question Set{' '}
+                        <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <div className='relative'>
+                        <select
+                          id='question-sets'
+                          value={basicForm.questionSets}
+                          onChange={(event) =>
+                            setBasicForm((prev) => ({
+                              ...prev,
+                              questionSets: Number(event.target.value),
+                            }))
+                          }
+                          className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+                        >
+                          {Array.from({ length: 10 }).map((_, index) => {
+                            const value = index + 1;
+                            return (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      </div>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label
+                        htmlFor='question-type'
+                        className={fieldLabelClass}
+                      >
+                        Question Type <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <div className='relative'>
+                        <select
+                          id='question-type'
+                          value={basicForm.questionType}
+                          onChange={(event) =>
+                            setBasicForm((prev) => ({
+                              ...prev,
+                              questionType: event.target.value as QuestionType,
+                            }))
+                          }
+                          className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+                        >
+                          <option value='radio'>Radio</option>
+                          <option value='checkbox'>Checkbox</option>
+                          <option value='text'>Text</option>
+                        </select>
+                        <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      </div>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label htmlFor='start-time' className={fieldLabelClass}>
+                        Start Time <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <div className='relative'>
+                        <Input
+                          id='start-time'
+                          type='datetime-local'
+                          value={basicForm.startTime}
+                          onChange={(event) =>
+                            setBasicForm((prev) => ({
+                              ...prev,
+                              startTime: event.target.value,
+                            }))
+                          }
+                          className={`${inputClass} pr-10`}
+                        />
+                        <Clock3 className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      </div>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label htmlFor='end-time' className={fieldLabelClass}>
+                        End Time <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <div className='relative'>
+                        <Input
+                          id='end-time'
+                          type='datetime-local'
+                          value={basicForm.endTime}
+                          onChange={(event) =>
+                            setBasicForm((prev) => ({
+                              ...prev,
+                              endTime: event.target.value,
+                            }))
+                          }
+                          className={`${inputClass} pr-10`}
+                        />
+                        <Clock3 className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      </div>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label htmlFor='duration' className={fieldLabelClass}>
+                        Duration
+                      </Label>
+                      <Input
+                        id='duration'
+                        type='number'
+                        min={1}
+                        value={basicForm.duration}
+                        onChange={(event) =>
+                          setBasicForm((prev) => ({
+                            ...prev,
+                            duration: Number(event.target.value),
+                          }))
+                        }
+                        className={inputClass}
+                        placeholder='Duration time'
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='candidates' className={fieldLabelClass}>
-                    Total Candidates <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <Input
-                    id='candidates'
-                    type='number'
-                    min={1}
-                    value={basicForm.totalCandidates}
-                    onChange={(event) =>
-                      setBasicForm((prev) => ({
-                        ...prev,
-                        totalCandidates: Number(event.target.value),
-                      }))
-                    }
-                    className={inputClass}
-                    placeholder='Enter total candidates'
-                  />
-                </div>
-
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='slots' className={fieldLabelClass}>
-                    Total Slots <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <div className='relative'>
-                    <select
-                      id='slots'
-                      value={basicForm.totalSlots}
-                      onChange={(event) =>
-                        setBasicForm((prev) => ({
-                          ...prev,
-                          totalSlots: Number(event.target.value),
-                        }))
-                      }
-                      className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+                <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5'>
+                  <div className='flex items-center justify-between'>
+                    <Button
+                      variant='outline'
+                      onClick={() => router.push('/employer/dashboard')}
+                      className='h-11 rounded-xl border-[#d8dde8] bg-[#f6f7fb] px-10 text-[#3c4a66]'
                     >
-                      {Array.from({ length: 10 }).map((_, index) => {
-                        const value = index + 1;
-                        return (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
-                  </div>
-                </div>
+                      Cancel
+                    </Button>
 
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='question-sets' className={fieldLabelClass}>
-                    Total Question Set <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <div className='relative'>
-                    <select
-                      id='question-sets'
-                      value={basicForm.questionSets}
-                      onChange={(event) =>
-                        setBasicForm((prev) => ({
-                          ...prev,
-                          questionSets: Number(event.target.value),
-                        }))
-                      }
-                      className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+                    <Button
+                      disabled={!canContinue}
+                      onClick={() => setShowBasicInfoReview(true)}
+                      className='h-11 rounded-xl bg-[#5b3bfe] px-8 font-semibold text-white hover:bg-[#4d30df]'
                     >
-                      {Array.from({ length: 10 }).map((_, index) => {
-                        const value = index + 1;
-                        return (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      Save & Continue
+                    </Button>
                   </div>
                 </div>
-
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='question-type' className={fieldLabelClass}>
-                    Question Type <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <div className='relative'>
-                    <select
-                      id='question-type'
-                      value={basicForm.questionType}
-                      onChange={(event) =>
-                        setBasicForm((prev) => ({
-                          ...prev,
-                          questionType: event.target.value as QuestionType,
-                        }))
-                      }
-                      className='h-11 w-full appearance-none rounded-xl border border-[#d9dde7] bg-[#fdfdff] px-3 text-sm text-[#344054] outline-none'
+              </>
+            ) : (
+              <>
+                <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5 sm:p-6'>
+                  <div className='flex items-center justify-between'>
+                    <h2 className='text-[24px] font-semibold text-[#2f3d56]'>
+                      Basic Information
+                    </h2>
+                    <button
+                      type='button'
+                      onClick={() => setShowBasicInfoReview(false)}
+                      className='text-xs font-semibold text-[#5b3bfe] hover:underline'
                     >
-                      <option value='radio'>Radio</option>
-                      <option value='checkbox'>Checkbox</option>
-                      <option value='text'>Text</option>
-                    </select>
-                    <ChevronDown className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                      Edit
+                    </button>
+                  </div>
+
+                  <div className='mt-4 rounded-xl border border-[#e2e6f1] bg-white px-4 py-4'>
+                    <p className='text-sm font-semibold text-[#2f3d56]'>
+                      {basicForm.title || '-'}
+                    </p>
+
+                    <div className='mt-4 grid gap-4 text-xs text-[#6c7896] md:grid-cols-5'>
+                      <div>
+                        <p>Total Candidates</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {basicForm.totalCandidates}
+                        </p>
+                      </div>
+                      <div>
+                        <p>Total Slots</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {basicForm.totalSlots}
+                        </p>
+                      </div>
+                      <div>
+                        <p>Total Question Set</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {basicForm.questionSets}
+                        </p>
+                      </div>
+                      <div>
+                        <p>Question For Slots (Minutes)</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {basicForm.duration}
+                        </p>
+                      </div>
+                      <div>
+                        <p>Question Type</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {getQuestionTypeLabel(basicForm.questionType)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className='mt-4 grid gap-4 text-xs text-[#6c7896] md:grid-cols-2'>
+                      <div>
+                        <p>Start</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {formatDateLabel(basicForm.startTime)} ·{' '}
+                          {formatTimeLabel(basicForm.startTime)}
+                        </p>
+                      </div>
+                      <div>
+                        <p>End</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {formatDateLabel(basicForm.endTime)} ·{' '}
+                          {formatTimeLabel(basicForm.endTime)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='start-time' className={fieldLabelClass}>
-                    Start Time <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <div className='relative'>
-                    <Input
-                      id='start-time'
-                      type='datetime-local'
-                      value={basicForm.startTime}
-                      onChange={(event) =>
-                        setBasicForm((prev) => ({
-                          ...prev,
-                          startTime: event.target.value,
-                        }))
-                      }
-                      className={`${inputClass} pr-10`}
-                    />
-                    <Clock3 className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
+                <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5'>
+                  <div className='flex items-center justify-between'>
+                    <Button
+                      variant='outline'
+                      onClick={() => router.push('/employer/dashboard')}
+                      className='h-11 rounded-xl border-[#d8dde8] bg-[#f6f7fb] px-10 text-[#3c4a66]'
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      disabled={!canContinue}
+                      onClick={() => setStep(2)}
+                      className='h-11 rounded-xl bg-[#5b3bfe] px-8 font-semibold text-white hover:bg-[#4d30df]'
+                    >
+                      Save & Continue
+                    </Button>
                   </div>
                 </div>
-
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='end-time' className={fieldLabelClass}>
-                    End Time <span className='text-[#ef4444]'>*</span>
-                  </Label>
-                  <div className='relative'>
-                    <Input
-                      id='end-time'
-                      type='datetime-local'
-                      value={basicForm.endTime}
-                      onChange={(event) =>
-                        setBasicForm((prev) => ({
-                          ...prev,
-                          endTime: event.target.value,
-                        }))
-                      }
-                      className={`${inputClass} pr-10`}
-                    />
-                    <Clock3 className='pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[#8d97b2]' />
-                  </div>
-                </div>
-
-                <div className='flex flex-col gap-2'>
-                  <Label htmlFor='duration' className={fieldLabelClass}>
-                    Duration
-                  </Label>
-                  <Input
-                    id='duration'
-                    type='number'
-                    min={1}
-                    value={basicForm.duration}
-                    onChange={(event) =>
-                      setBasicForm((prev) => ({
-                        ...prev,
-                        duration: Number(event.target.value),
-                      }))
-                    }
-                    className={inputClass}
-                    placeholder='Duration time'
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className='mx-auto w-full max-w-5xl rounded-2xl border border-[#e2e5ef] bg-[#f8f9fc] p-5'>
-              <div className='flex items-center justify-between'>
-                <Button
-                  variant='outline'
-                  onClick={() => router.push('/employer/dashboard')}
-                  className='h-11 rounded-xl border-[#d8dde8] bg-[#f6f7fb] px-10 text-[#3c4a66]'
-                >
-                  Cancel
-                </Button>
-
-                <Button
-                  disabled={!canContinue}
-                  onClick={() => setStep(2)}
-                  className='h-11 rounded-xl bg-[#5b3bfe] px-8 font-semibold text-white hover:bg-[#4d30df]'
-                >
-                  Save & Continue
-                </Button>
-              </div>
-            </div>
+              </>
+            )}
           </>
         ) : (
           <div className='mx-auto flex w-full max-w-5xl flex-col gap-5'>

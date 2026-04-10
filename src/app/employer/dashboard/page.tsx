@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from 'boneyard-js/react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -38,7 +39,7 @@ function formatDateYmd(value: string) {
 
 export default function EmployerDashboardPage() {
   const router = useRouter();
-  const { exams } = useExamStore();
+  const { exams, isLoading } = useExamStore();
   const [modalCandidates, setModalCandidates] = useState<
     Array<{ candidateId: string | null; candidateEmail: string }>
   >([]);
@@ -301,295 +302,360 @@ export default function EmployerDashboardPage() {
     return filteredExams.slice(start, start + perPage);
   }, [activePage, filteredExams, perPage]);
 
-  return (
+  const showLoadingSkeleton = isLoading && exams.length === 0;
+  const skeletonFallback = (
     <main className='min-h-screen bg-[#f5f6fb] px-4 py-8 text-zinc-900 sm:px-6'>
       <section className='mx-auto flex w-full max-w-350 flex-col gap-5'>
-        <header className='flex flex-col gap-3 lg:flex-row lg:items-center'>
-          <h1 className='text-[30px] font-semibold text-[#2c3b53]'>
-            Online Tests
-          </h1>
-
+        <div className='flex flex-col gap-3 lg:flex-row lg:items-center'>
+          <div className='h-9 w-48 rounded-xl bg-zinc-200/80' />
           <div className='relative flex-1 lg:ml-auto lg:max-w-xl'>
-            <Input
-              value={searchTerm}
-              onChange={(event) => {
-                setSearchTerm(event.target.value);
-                setPage(1);
-              }}
-              placeholder='Search by exam title'
-              className='h-10 rounded-xl border-[#cbcfe6] bg-white pr-10 text-sm'
-            />
-            <Image
-              src='/search-icon.png'
-              alt='Search'
-              width={100}
-              height={100}
-              className='w-7 h-7 md:w-[32px] md:h-[32px] absolute right-3 top-1/2 -translate-y-1/2 text-violet-500'
-            />
+            <div className='h-10 rounded-xl bg-zinc-200/80' />
           </div>
-
           <div className='flex items-center justify-end gap-2'>
-            <Button
-              asChild
-              className='h-10 rounded-xl bg-[#5c3bfe] px-5 font-semibold text-white hover:bg-[#4f31e2]'
-            >
-              <Link href='/employer/create-test'>Create Online Test</Link>
-            </Button>
+            <div className='h-10 w-44 rounded-xl bg-zinc-200/80' />
           </div>
-        </header>
+        </div>
 
         <div className='grid gap-4 md:grid-cols-2'>
-          {pagedExams.map((exam) => (
+          {Array.from({ length: 4 }).map((_, index) => (
             <Card
-              key={exam.id}
+              key={index}
               className='gap-3 rounded-2xl border border-[#dfe2ee] bg-white py-5 shadow-none'
             >
               <CardHeader>
-                <CardTitle className='text-[31px] font-semibold text-[#2f3d56]'>
-                  {exam.title}
-                </CardTitle>
-                <CardDescription className='text-xs text-[#8490ad]'>
-                  {formatDateYmd(exam.startTime)} -{' '}
-                  {formatDateYmd(exam.endTime)}
-                </CardDescription>
+                <div className='h-8 w-4/5 rounded bg-zinc-200/80' />
+                <div className='mt-2 h-4 w-1/3 rounded bg-zinc-200/80' />
               </CardHeader>
               <CardContent className='flex flex-col gap-4'>
-                <div className='flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[#7481a1]'>
-                  <p className='flex items-center gap-1.5'>
-                    <Users className='size-3.5' /> Candidates:{' '}
-                    {metricValue(exam.totalCandidates)}
-                  </p>
-                  <p className='flex items-center gap-1.5'>
-                    <FileText className='size-3.5' /> Question Set:{' '}
-                    {metricValue(exam.questionSets)}
-                  </p>
-                  <p className='flex items-center gap-1.5'>
-                    <Workflow className='size-3.5' /> Exam Slots:{' '}
-                    {metricValue(exam.totalSlots)}
-                  </p>
+                <div className='flex flex-wrap items-center gap-x-6 gap-y-2'>
+                  <div className='h-4 w-24 rounded bg-zinc-200/80' />
+                  <div className='h-4 w-28 rounded bg-zinc-200/80' />
+                  <div className='h-4 w-24 rounded bg-zinc-200/80' />
                 </div>
-                <Button
-                  variant='outline'
-                  onClick={() => openCandidatesModal(exam)}
-                  className='h-8 w-fit rounded-xl border-[#6f4fff] px-5 text-xs font-semibold text-[#5c3bfe] hover:bg-[#f4f1ff]'
-                >
-                  View Candidates
-                </Button>
+                <div className='h-8 w-28 rounded-xl bg-zinc-200/80' />
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {pagedExams.length === 0 ? (
-          <Card className='rounded-2xl border border-dashed border-[#cfd5e8] bg-white py-8 text-center shadow-none'>
-            <CardContent>
-              <Image
-                src='/group.png'
-                alt='No exams found'
-                width={100}
-                height={100}
-                className='mx-auto'
-              />
-
-              <p className='text-lg font-bold'>
-                No exams found for your search.
-              </p>
-              <p className='text-sm font-normal text-[#64748B] mt-3'>
-                Currently, there are no online tests available. Please check
-                back later for updates.
-              </p>
-            </CardContent>
-          </Card>
-        ) : null}
-
         <div className='flex items-center justify-between pt-1 text-xs text-[#636c84]'>
           <div className='flex items-center gap-3'>
-            <button
-              type='button'
-              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              disabled={activePage === 1}
-              className='flex size-6 items-center justify-center rounded border border-[#d8dced] bg-white disabled:opacity-40'
-            >
-              <ChevronLeft className='size-3.5' />
-            </button>
-            <span className='font-semibold'>{activePage}</span>
-            <button
-              type='button'
-              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              disabled={activePage === totalPages}
-              className='flex size-6 items-center justify-center rounded border border-[#d8dced] bg-white disabled:opacity-40'
-            >
-              <ChevronRight className='size-3.5' />
-            </button>
+            <div className='h-6 w-6 rounded bg-zinc-200/80' />
+            <div className='h-4 w-4 rounded bg-zinc-200/80' />
+            <div className='h-6 w-6 rounded bg-zinc-200/80' />
           </div>
-
           <div className='flex items-center gap-2'>
-            <span>Online Test Per Page</span>
-            <select
-              value={perPage}
-              onChange={(event) => {
-                setPerPage(Number(event.target.value));
-                setPage(1);
-              }}
-              className='rounded-md border border-[#d8dced] bg-white px-2 py-1 outline-none'
-            >
-              <option value={4}>4</option>
-              <option value={8}>8</option>
-              <option value={12}>12</option>
-            </select>
+            <div className='h-4 w-36 rounded bg-zinc-200/80' />
+            <div className='h-8 w-16 rounded-md bg-zinc-200/80' />
           </div>
         </div>
 
-        <p className='text-xs text-[#697392]'>
-          {filteredExams.length} tests active · {totalCandidates} candidates in
-          pipeline
-        </p>
+        <div className='h-4 w-64 rounded bg-zinc-200/80' />
       </section>
-
-      {selectedExam ? (
-        <div className='fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4'>
-          <Card className='w-full max-w-4xl'>
-            <CardHeader>
-              <CardTitle>{selectedExam.title}</CardTitle>
-              <CardDescription>
-                Select a candidate to see answers and score
-              </CardDescription>
-            </CardHeader>
-            <CardContent className='grid gap-4 md:grid-cols-[220px_1fr]'>
-              <div className='rounded-xl border border-zinc-200 bg-zinc-50 p-2'>
-                {isLoadingCandidates ? (
-                  <div className='flex items-center gap-2 px-2 py-4 text-xs text-zinc-500'>
-                    <Loader2 className='size-3.5 animate-spin' /> Loading
-                    candidates...
-                  </div>
-                ) : null}
-
-                {!isLoadingCandidates && modalCandidates.length === 0 ? (
-                  <p className='px-2 py-4 text-xs text-zinc-500'>
-                    No candidates found yet.
-                  </p>
-                ) : (
-                  <ul className='space-y-1'>
-                    {modalCandidates.map((candidate) => {
-                      const active =
-                        candidate.candidateEmail === selectedCandidateEmail;
-
-                      return (
-                        <li key={candidate.candidateEmail}>
-                          <button
-                            type='button'
-                            onClick={() =>
-                              void loadCandidateResult(
-                                selectedExam.id,
-                                candidate,
-                              )
-                            }
-                            className={`w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition ${
-                              active
-                                ? 'bg-[#5c3bfe] text-white'
-                                : 'bg-white text-zinc-700 hover:bg-zinc-100'
-                            }`}
-                          >
-                            {candidate.candidateEmail}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-
-              <div className='rounded-xl border border-zinc-200 bg-white p-4'>
-                {!selectedCandidateEmail ? (
-                  <p className='text-sm text-zinc-500'>
-                    Select a candidate from the left panel.
-                  </p>
-                ) : null}
-
-                {isLoadingCandidateResult ? (
-                  <div className='flex items-center gap-2 text-sm text-zinc-500'>
-                    <Loader2 className='size-4 animate-spin' /> Loading
-                    candidate result...
-                  </div>
-                ) : null}
-
-                {candidateResultError ? (
-                  <p className='rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700'>
-                    {candidateResultError}
-                  </p>
-                ) : null}
-
-                {!isLoadingCandidateResult &&
-                !candidateResultError &&
-                selectedCandidateEmail &&
-                !candidateSubmission ? (
-                  <p className='text-sm text-zinc-600'>
-                    This candidate has not submitted the exam yet.
-                  </p>
-                ) : null}
-
-                {candidateSubmission ? (
-                  <div className='space-y-3'>
-                    <div className='rounded-lg bg-[#f3efff] px-3 py-2 text-sm text-[#4b34a5]'>
-                      Score:{' '}
-                      <strong>{candidateSubmission.score.toFixed(2)}</strong>
-                      {' / '}
-                      <strong>{candidateSubmission.maxScore.toFixed(2)}</strong>
-                      <span className='ml-3 text-xs text-[#6a57c5]'>
-                        Submitted:{' '}
-                        {new Date(
-                          candidateSubmission.submittedAt,
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-
-                    {candidateAnswers.length === 0 ? (
-                      <p className='text-sm text-zinc-600'>
-                        No answers found for this submission.
-                      </p>
-                    ) : (
-                      <ul className='max-h-85 space-y-2 overflow-y-auto pr-1'>
-                        {candidateAnswers.map((answer, index) => (
-                          <li
-                            key={answer.id}
-                            className='rounded-lg border border-zinc-200 bg-zinc-50 p-3'
-                          >
-                            <p className='text-sm font-semibold text-zinc-800'>
-                              Q{index + 1}. {answer.questionTitle}
-                            </p>
-                            <p className='mt-1 text-xs text-zinc-500'>
-                              Type: {answer.questionType}
-                            </p>
-                            <p className='mt-2 text-sm text-zinc-700'>
-                              Candidate:{' '}
-                              {formatAnswerValue(answer.candidateAnswer)}
-                            </p>
-                            <p className='mt-1 text-sm text-zinc-700'>
-                              Correct: {formatAnswerValue(answer.correctAnswer)}
-                            </p>
-                            <p className='mt-1 text-xs text-zinc-500'>
-                              Awarded: {answer.awardedPoints.toFixed(2)} pts
-                              {answer.isCorrect === null
-                                ? ' (manual review)'
-                                : answer.isCorrect
-                                  ? ' (correct)'
-                                  : ' (incorrect)'}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className='md:col-span-2'>
-                <Button onClick={closeCandidatesModal}>Close</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
     </main>
+  );
+
+  return (
+    <Skeleton
+      name='employer-dashboard'
+      loading={showLoadingSkeleton}
+      fallback={skeletonFallback}
+      fixture={skeletonFallback}
+    >
+      <main className='min-h-screen bg-[#f5f6fb] px-4 py-8 text-zinc-900 sm:px-6'>
+        <section className='mx-auto flex w-full max-w-350 flex-col gap-5'>
+          <header className='flex flex-col gap-3 lg:flex-row lg:items-center'>
+            <h1 className='text-[30px] font-semibold text-[#2c3b53]'>
+              Online Tests
+            </h1>
+
+            <div className='relative flex-1 lg:ml-auto lg:max-w-xl'>
+              <Input
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(1);
+                }}
+                placeholder='Search by exam title'
+                className='h-10 rounded-xl border-[#cbcfe6] bg-white pr-10 text-sm'
+              />
+              <Image
+                src='/search-icon.png'
+                alt='Search'
+                width={100}
+                height={100}
+                className='absolute right-3 top-1/2 h-7 w-7 -translate-y-1/2 md:h-8 md:w-8'
+              />
+            </div>
+
+            <div className='flex items-center justify-end gap-2'>
+              <Button
+                asChild
+                className='h-10 rounded-xl bg-[#5c3bfe] px-5 font-semibold text-white hover:bg-[#4f31e2]'
+              >
+                <Link href='/employer/create-test'>Create Online Test</Link>
+              </Button>
+            </div>
+          </header>
+
+          <div className='grid gap-4 md:grid-cols-2'>
+            {pagedExams.map((exam) => (
+              <Card
+                key={exam.id}
+                className='gap-3 rounded-2xl border border-[#dfe2ee] bg-white py-5 shadow-none'
+              >
+                <CardHeader>
+                  <CardTitle className='text-[31px] font-semibold text-[#2f3d56]'>
+                    {exam.title}
+                  </CardTitle>
+                  <CardDescription className='text-xs text-[#8490ad]'>
+                    {formatDateYmd(exam.startTime)} -{' '}
+                    {formatDateYmd(exam.endTime)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='flex flex-col gap-4'>
+                  <div className='flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-[#7481a1]'>
+                    <p className='flex items-center gap-1.5'>
+                      <Users className='size-3.5' /> Candidates:{' '}
+                      {metricValue(exam.totalCandidates)}
+                    </p>
+                    <p className='flex items-center gap-1.5'>
+                      <FileText className='size-3.5' /> Question Set:{' '}
+                      {metricValue(exam.questionSets)}
+                    </p>
+                    <p className='flex items-center gap-1.5'>
+                      <Workflow className='size-3.5' /> Exam Slots:{' '}
+                      {metricValue(exam.totalSlots)}
+                    </p>
+                  </div>
+                  <Button
+                    variant='outline'
+                    onClick={() => openCandidatesModal(exam)}
+                    className='h-8 w-fit rounded-xl border-[#6f4fff] px-5 text-xs font-semibold text-[#5c3bfe] hover:bg-[#f4f1ff]'
+                  >
+                    View Candidates
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {pagedExams.length === 0 ? (
+            <Card className='rounded-2xl border border-dashed border-[#cfd5e8] bg-white py-8 text-center shadow-none'>
+              <CardContent>
+                <Image
+                  src='/group.png'
+                  alt='No exams found'
+                  width={100}
+                  height={100}
+                  className='mx-auto'
+                />
+
+                <p className='text-lg font-bold'>
+                  No exams found for your search.
+                </p>
+                <p className='mt-3 text-sm font-normal text-[#64748B]'>
+                  Currently, there are no online tests available. Please check
+                  back later for updates.
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          <div className='flex items-center justify-between pt-1 text-xs text-[#636c84]'>
+            <div className='flex items-center gap-3'>
+              <button
+                type='button'
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={activePage === 1}
+                className='flex size-6 items-center justify-center rounded border border-[#d8dced] bg-white disabled:opacity-40'
+              >
+                <ChevronLeft className='size-3.5' />
+              </button>
+              <span className='font-semibold'>{activePage}</span>
+              <button
+                type='button'
+                onClick={() =>
+                  setPage((prev) => Math.min(totalPages, prev + 1))
+                }
+                disabled={activePage === totalPages}
+                className='flex size-6 items-center justify-center rounded border border-[#d8dced] bg-white disabled:opacity-40'
+              >
+                <ChevronRight className='size-3.5' />
+              </button>
+            </div>
+
+            <div className='flex items-center gap-2'>
+              <span>Online Test Per Page</span>
+              <select
+                value={perPage}
+                onChange={(event) => {
+                  setPerPage(Number(event.target.value));
+                  setPage(1);
+                }}
+                className='rounded-md border border-[#d8dced] bg-white px-2 py-1 outline-none'
+              >
+                <option value={4}>4</option>
+                <option value={8}>8</option>
+                <option value={12}>12</option>
+              </select>
+            </div>
+          </div>
+
+          <p className='text-xs text-[#697392]'>
+            {filteredExams.length} tests active · {totalCandidates} candidates
+            in pipeline
+          </p>
+        </section>
+
+        {selectedExam ? (
+          <div className='fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4'>
+            <Card className='w-full max-w-4xl'>
+              <CardHeader>
+                <CardTitle>{selectedExam.title}</CardTitle>
+                <CardDescription>
+                  Select a candidate to see answers and score
+                </CardDescription>
+              </CardHeader>
+              <CardContent className='grid gap-4 md:grid-cols-[220px_1fr]'>
+                <div className='rounded-xl border border-zinc-200 bg-zinc-50 p-2'>
+                  {isLoadingCandidates ? (
+                    <div className='flex items-center gap-2 px-2 py-4 text-xs text-zinc-500'>
+                      <Loader2 className='size-3.5 animate-spin' /> Loading
+                      candidates...
+                    </div>
+                  ) : null}
+
+                  {!isLoadingCandidates && modalCandidates.length === 0 ? (
+                    <p className='px-2 py-4 text-xs text-zinc-500'>
+                      No candidates found yet.
+                    </p>
+                  ) : (
+                    <ul className='space-y-1'>
+                      {modalCandidates.map((candidate) => {
+                        const active =
+                          candidate.candidateEmail === selectedCandidateEmail;
+
+                        return (
+                          <li key={candidate.candidateEmail}>
+                            <button
+                              type='button'
+                              onClick={() =>
+                                void loadCandidateResult(
+                                  selectedExam.id,
+                                  candidate,
+                                )
+                              }
+                              className={`w-full rounded-lg px-3 py-2 text-left text-xs font-medium transition ${
+                                active
+                                  ? 'bg-[#5c3bfe] text-white'
+                                  : 'bg-white text-zinc-700 hover:bg-zinc-100'
+                              }`}
+                            >
+                              {candidate.candidateEmail}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+
+                <div className='rounded-xl border border-zinc-200 bg-white p-4'>
+                  {!selectedCandidateEmail ? (
+                    <p className='text-sm text-zinc-500'>
+                      Select a candidate from the left panel.
+                    </p>
+                  ) : null}
+
+                  {isLoadingCandidateResult ? (
+                    <div className='flex items-center gap-2 text-sm text-zinc-500'>
+                      <Loader2 className='size-4 animate-spin' /> Loading
+                      candidate result...
+                    </div>
+                  ) : null}
+
+                  {candidateResultError ? (
+                    <p className='rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700'>
+                      {candidateResultError}
+                    </p>
+                  ) : null}
+
+                  {!isLoadingCandidateResult &&
+                  !candidateResultError &&
+                  selectedCandidateEmail &&
+                  !candidateSubmission ? (
+                    <p className='text-sm text-zinc-600'>
+                      This candidate has not submitted the exam yet.
+                    </p>
+                  ) : null}
+
+                  {candidateSubmission ? (
+                    <div className='space-y-3'>
+                      <div className='rounded-lg bg-[#f3efff] px-3 py-2 text-sm text-[#4b34a5]'>
+                        Score:{' '}
+                        <strong>{candidateSubmission.score.toFixed(2)}</strong>
+                        {' / '}
+                        <strong>
+                          {candidateSubmission.maxScore.toFixed(2)}
+                        </strong>
+                        <span className='ml-3 text-xs text-[#6a57c5]'>
+                          Submitted:{' '}
+                          {new Date(
+                            candidateSubmission.submittedAt,
+                          ).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {candidateAnswers.length === 0 ? (
+                        <p className='text-sm text-zinc-600'>
+                          No answers found for this submission.
+                        </p>
+                      ) : (
+                        <ul className='max-h-85 space-y-2 overflow-y-auto pr-1'>
+                          {candidateAnswers.map((answer, index) => (
+                            <li
+                              key={answer.id}
+                              className='rounded-lg border border-zinc-200 bg-zinc-50 p-3'
+                            >
+                              <p className='text-sm font-semibold text-zinc-800'>
+                                Q{index + 1}. {answer.questionTitle}
+                              </p>
+                              <p className='mt-1 text-xs text-zinc-500'>
+                                Type: {answer.questionType}
+                              </p>
+                              <p className='mt-2 text-sm text-zinc-700'>
+                                Candidate:{' '}
+                                {formatAnswerValue(answer.candidateAnswer)}
+                              </p>
+                              <p className='mt-1 text-sm text-zinc-700'>
+                                Correct:{' '}
+                                {formatAnswerValue(answer.correctAnswer)}
+                              </p>
+                              <p className='mt-1 text-xs text-zinc-500'>
+                                Awarded: {answer.awardedPoints.toFixed(2)} pts
+                                {answer.isCorrect === null
+                                  ? ' (manual review)'
+                                  : answer.isCorrect
+                                    ? ' (correct)'
+                                    : ' (incorrect)'}
+                              </p>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className='md:col-span-2'>
+                  <Button onClick={closeCandidatesModal}>Close</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+      </main>
+    </Skeleton>
   );
 }

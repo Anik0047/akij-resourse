@@ -1,36 +1,174 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# akij-resource
 
-## Getting Started
+Akij Resource is a Next.js 16 application for candidate and employer workflows. It uses Supabase for authentication, user profiles, and exam data, with shared UI primitives built on Tailwind CSS, shadcn-style components, and generated Boneyard skeleton assets.
 
-First, run the development server:
+## Tech Stack
+
+- Next.js 16 with the App Router
+- React 19
+- Supabase SSR and Supabase Auth
+- Tailwind CSS 4
+- Zustand for client state
+- Boneyard for skeleton generation
+- Lucide icons and Radix UI primitives
+
+## Prerequisites
+
+Install the following before you start:
+
+- Node.js 20 or newer
+- pnpm 9 or newer
+- A Supabase project
+- Supabase CLI if you want to manage the database locally from the checked-in migrations
+
+## Setup
+
+1. Install dependencies.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Create a local environment file.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a file named `.env.local` in the project root with the following values:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+```
+
+These values are required by both the browser and server Supabase clients in `src/lib/supabase/client.ts`, `src/lib/supabase/server.ts`, and `src/lib/supabase/proxy.ts`.
+
+3. Create or link a Supabase project.
+
+- In the Supabase dashboard, create a new project or open an existing one.
+- Copy the project URL and the publishable key into `.env.local`.
+- If you use a remote project, make sure the database schema matches the migrations in `supabase/migrations`.
+
+4. Apply the database migrations.
+
+The repository includes the full schema for auth profiles, employer/candidate role tables, exam data, online tests, and submission linking.
+
+If you are using the Supabase CLI locally, apply the migrations in order. A typical flow is:
+
+```bash
+supabase start
+supabase db reset
+```
+
+If you are working against a linked remote Supabase project, push the migrations instead:
+
+```bash
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+The checked-in migrations live in `supabase/migrations` and should be applied in timestamp order.
+
+5. Start the development server.
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Common Scripts
+
+```bash
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm bones
+pnpm bones:watch
+```
+
+- `pnpm dev` starts the local Next.js development server.
+- `pnpm build` creates a production build.
+- `pnpm start` runs the production server after a build.
+- `pnpm lint` runs ESLint.
+- `pnpm bones` generates Boneyard output into `src/bones`.
+- `pnpm bones:watch` rebuilds Boneyard output on file changes.
+
+## Environment Variables
+
+| Variable                               | Required | Purpose                                                     |
+| -------------------------------------- | -------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes      | Supabase project URL used by browser and server clients     |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes      | Supabase publishable key used by browser and server clients |
+
+No other environment variables are currently required by the checked-in source.
+
+## Database Setup
+
+The Supabase schema under `supabase/migrations` includes:
+
+- `user_profiles` and role enforcement
+- `employees` and `candidates` tables
+- `questions`, `exam_submissions`, and `exam_submission_answers`
+- `online_tests`
+- triggers for role syncing and ownership enforcement
+- row-level security policies for authenticated access
+
+If you add a new migration, keep the timestamped naming pattern so it applies in the correct order.
+
+## Project Structure
+
+```text
+src/
+	app/                 Next.js routes, pages, and route handlers
+	components/          Shared UI and feature components
+	hooks/               Client hooks and state helpers
+	lib/                 Utilities, Supabase clients, and assessment helpers
+	bones/               Generated Boneyard output
+supabase/migrations/   SQL migrations for the database schema
+```
+
+## Key Routes
+
+- `/login`, `/sign-up`, `/forgot-password`, `/update-password`: authentication flow
+- `/candidate/dashboard`: candidate workspace
+- `/candidate/exam/[id]`: candidate exam page
+- `/employer/dashboard`: employer workspace
+- `/employer/create-test`: test creation flow
+- `/protected`: protected route example
+
+## Notes
+
+- The Supabase clients are created per request on the server to avoid session issues with Fluid compute.
+- `reactCompiler` is enabled in `next.config.ts`.
+- The project uses the Next.js App Router, so route files live under `src/app`.
+
+## Deployment
+
+This project can be deployed like a standard Next.js app. For production, make sure the same Supabase environment variables are configured in the hosting platform and that the database migrations have been applied.
+
+For Vercel, the deployment flow is typically:
+
+1. Push the repository to your Git provider.
+2. Import the project into Vercel.
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in the Vercel environment settings.
+4. Run the Supabase migrations against the target database.
+5. Deploy.
+
+## Additional Questions
+
+### MCP Integration
+
+I have not used MCP directly in this project yet. A practical use case here would be connecting Figma MCP for design handoff, Chrome DevTools MCP for debugging UI issues, or Supabase MCP for inspecting schema, policies, and migration state without leaving the editor.
+
+### AI Tools for Development
+
+The fastest workflow for frontend work is usually a mix of GitHub Copilot for inline implementation, ChatGPT or Claude for architecture and debugging help, and small repeatable prompts for tasks like component scaffolding, form wiring, and test case generation. The best results come from using AI to draft quickly, then reviewing the code manually for correctness, accessibility, and project conventions.
+
+### Offline Mode
+
+If a candidate loses internet during an exam, the safest approach is to keep the exam state local while the connection is down and sync it once the network returns. That means saving answers, timer state, and submission drafts in browser storage, showing a clear offline status banner, blocking duplicate submits, and reconnecting through a background sync queue or retry flow. For stricter integrity, the exam can also enforce an autosave cadence and a final server-side validation step before accepting the submission.
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Docs](https://supabase.com/docs)
+- [Vercel Deployment Docs](https://nextjs.org/docs/app/building-your-application/deploying)
