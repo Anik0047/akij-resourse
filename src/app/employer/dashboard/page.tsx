@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from 'boneyard-js/react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -57,65 +58,125 @@ export default function EmployerDashboardPage() {
 
   return (
     <main className='min-h-screen bg-[#fff9f1] px-6 py-10 text-zinc-900'>
-      <section className='mx-auto flex w-full max-w-6xl flex-col gap-8'>
-        <header className='flex flex-col gap-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between'>
-          <div className='flex flex-col gap-2'>
-            <p className='text-xs uppercase tracking-[0.2em] text-amber-700'>
-              Employer Panel
-            </p>
-            <h1 className='text-3xl font-semibold'>Online Tests Dashboard</h1>
-            <p className='text-sm text-zinc-600'>
-              {exams.length} tests active · {totalCandidates} candidates in
-              pipeline
-            </p>
-          </div>
-          <div className='flex gap-3'>
-            <Button asChild>
-              <Link href='/employer/create-test'>Create Online Test</Link>
-            </Button>
-            <Button variant='outline' onClick={onLogout}>
-              Logout
-            </Button>
-          </div>
-        </header>
-
-        <div className='grid gap-5 md:grid-cols-2'>
-          {exams.map((exam) => (
-            <Card key={exam.id} className='border-zinc-200 bg-white'>
-              <CardHeader>
-                <CardTitle>{exam.title}</CardTitle>
-                <CardDescription>
-                  Slot Window: {new Date(exam.startTime).toLocaleString()} to{' '}
-                  {new Date(exam.endTime).toLocaleString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='flex flex-col gap-4'>
-                <div className='grid grid-cols-2 gap-3 text-sm'>
-                  <p>
-                    <span className='font-medium'>Candidates:</span>{' '}
-                    {exam.totalCandidates}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Question Sets:</span>{' '}
-                    {exam.questionSets}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Exam Slots:</span>{' '}
-                    {exam.totalSlots}
-                  </p>
-                  <p>
-                    <span className='font-medium'>Duration:</span>{' '}
-                    {exam.duration} min
-                  </p>
-                </div>
-                <Button variant='outline' onClick={() => setSelectedExam(exam)}>
-                  View Candidates
+      <Skeleton
+        name='employer-dashboard'
+        loading={false}
+        fixture={
+          <section className='mx-auto flex w-full max-w-6xl flex-col gap-8'>
+            <header className='flex flex-col gap-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between'>
+              <div className='flex flex-col gap-2'>
+                <p className='text-xs uppercase tracking-[0.2em] text-amber-700'>
+                  Employer Panel
+                </p>
+                <h1 className='text-3xl font-semibold'>
+                  Online Tests Dashboard
+                </h1>
+                <p className='text-sm text-zinc-600'>
+                  2 tests active · 72 candidates in pipeline
+                </p>
+              </div>
+              <div className='flex gap-3'>
+                <Button disabled>Create Online Test</Button>
+                <Button variant='outline' disabled>
+                  Logout
                 </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+              </div>
+            </header>
+            <div className='grid gap-5 md:grid-cols-2'>
+              {[1, 2].map((i) => (
+                <Card key={i} className='border-zinc-200 bg-white'>
+                  <CardHeader>
+                    <CardTitle>Mock Test {i}</CardTitle>
+                    <CardDescription>Slot Window: Loading...</CardDescription>
+                  </CardHeader>
+                  <CardContent className='flex flex-col gap-4'>
+                    <div className='grid grid-cols-2 gap-3 text-sm'>
+                      <p>
+                        <span className='font-medium'>Candidates:</span> 24
+                      </p>
+                      <p>
+                        <span className='font-medium'>Question Sets:</span> 2
+                      </p>
+                      <p>
+                        <span className='font-medium'>Exam Slots:</span> 3
+                      </p>
+                      <p>
+                        <span className='font-medium'>Duration:</span> 30 min
+                      </p>
+                    </div>
+                    <Button variant='outline' disabled>
+                      View Candidates
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        }
+      >
+        <section className='mx-auto flex w-full max-w-6xl flex-col gap-8'>
+          <header className='flex flex-col gap-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between'>
+            <div className='flex flex-col gap-2'>
+              <p className='text-xs uppercase tracking-[0.2em] text-amber-700'>
+                Employer Panel
+              </p>
+              <h1 className='text-3xl font-semibold'>Online Tests Dashboard</h1>
+              <p className='text-sm text-zinc-600'>
+                {exams.length} tests active · {totalCandidates} candidates in
+                pipeline
+              </p>
+            </div>
+            <div className='flex gap-3'>
+              <Button asChild>
+                <Link href='/employer/create-test'>Create Online Test</Link>
+              </Button>
+              <Button variant='outline' onClick={onLogout}>
+                Logout
+              </Button>
+            </div>
+          </header>
+
+          <div className='grid gap-5 md:grid-cols-2'>
+            {exams.map((exam) => (
+              <Card key={exam.id} className='border-zinc-200 bg-white'>
+                <CardHeader>
+                  <CardTitle>{exam.title}</CardTitle>
+                  <CardDescription>
+                    Slot Window: {new Date(exam.startTime).toLocaleString()} to{' '}
+                    {new Date(exam.endTime).toLocaleString()}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='flex flex-col gap-4'>
+                  <div className='grid grid-cols-2 gap-3 text-sm'>
+                    <p>
+                      <span className='font-medium'>Candidates:</span>{' '}
+                      {exam.totalCandidates}
+                    </p>
+                    <p>
+                      <span className='font-medium'>Question Sets:</span>{' '}
+                      {exam.questionSets}
+                    </p>
+                    <p>
+                      <span className='font-medium'>Exam Slots:</span>{' '}
+                      {exam.totalSlots}
+                    </p>
+                    <p>
+                      <span className='font-medium'>Duration:</span>{' '}
+                      {exam.duration} min
+                    </p>
+                  </div>
+                  <Button
+                    variant='outline'
+                    onClick={() => setSelectedExam(exam)}
+                  >
+                    View Candidates
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      </Skeleton>
 
       {selectedExam ? (
         <div className='fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4'>

@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useExamStore } from '@/hooks/use-exam-store';
 import { createClient } from '@/lib/supabase/client';
 
@@ -19,12 +13,10 @@ export default function CandidateExamPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const { exams } = useExamStore();
-  const [started, setStarted] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState(0);
   const [activeQuestion, setActiveQuestion] = useState(0);
-  const [tabSwitchCount, setTabSwitchCount] = useState(0);
-  const [fullscreenExitCount, setFullscreenExitCount] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   const exam = useMemo(
     () => exams.find((item) => item.id === params.id),
@@ -34,206 +26,133 @@ export default function CandidateExamPage() {
   useEffect(() => {
     const ensureAuthenticated = async () => {
       const { data } = await supabase.auth.getUser();
-
-      if (!data.user) {
-        router.replace('/candidate/login');
-      }
+      if (!data.user) router.replace('/auth/login');
     };
 
-    void ensureAuthenticated();
+    ensureAuthenticated();
   }, [router]);
 
   useEffect(() => {
-    if (!started || submitted) {
-      return;
-    }
+    if (!exam) return;
 
-    const timer = window.setInterval(() => {
-      setTimeLeft((current) => {
-        if (current <= 1) {
-          window.clearInterval(timer);
-          setSubmitted(true);
+    const initTimer = window.setTimeout(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev : (exam.duration ?? 0) * 60));
+    }, 0);
+
+    return () => window.clearTimeout(initTimer);
+  }, [exam]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
           return 0;
         }
-
-        return current - 1;
+        return prev - 1;
       });
     }, 1000);
 
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [started, submitted]);
+    return () => clearInterval(timer);
+  }, [timeLeft]);
 
-  useEffect(() => {
-    if (!started || submitted) {
-      return;
-    }
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setTabSwitchCount((current) => current + 1);
-      }
-    };
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        setFullscreenExitCount((current) => current + 1);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, [started, submitted]);
-
-  const startExam = async () => {
-    if (!exam) {
-      return;
-    }
-
-    setStarted(true);
-    setSubmitted(false);
-    setTimeLeft(exam.duration * 60);
-
-    if (!document.fullscreenElement) {
-      try {
-        await document.documentElement.requestFullscreen();
-      } catch {
-        // Browser can block fullscreen without user permissions.
-      }
-    }
-  };
-
-  const submitExam = () => {
-    setSubmitted(true);
-  };
-
-  if (!exam) {
-    return (
-      <main className='flex min-h-screen items-center justify-center bg-[#effaf7] p-6'>
-        <Card className='w-full max-w-lg'>
-          <CardHeader>
-            <CardTitle>Exam not found</CardTitle>
-            <CardDescription>
-              The exam may have been removed by the employer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/candidate/dashboard')}>
-              Back to Dashboard
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
-    );
-  }
+  if (!exam) return null;
 
   const question = exam.questions[activeQuestion];
+  const isLastQuestion = activeQuestion === exam.questions.length - 1;
+  const selectedAnswer = question ? answers[question.id] : '';
+
+  const goNextQuestion = () => {
+    if (isLastQuestion) {
+      router.push('/candidate/dashboard');
+      return;
+    }
+
+    setActiveQuestion((prev) => prev + 1);
+  };
+
+  const handleSkipQuestion = () => {
+    goNextQuestion();
+  };
+
+  const handleSaveAndContinue = () => {
+    if (!question) return;
+    goNextQuestion();
+  };
+
   const minutes = Math.floor(timeLeft / 60)
     .toString()
     .padStart(2, '0');
+
   const seconds = (timeLeft % 60).toString().padStart(2, '0');
 
   return (
-    <main className='min-h-screen bg-[#effaf7] px-6 py-10 text-zinc-900'>
-      <section className='mx-auto flex w-full max-w-5xl flex-col gap-6'>
-        <header className='rounded-3xl border border-teal-200 bg-white p-6'>
-          <div className='flex flex-wrap items-center justify-between gap-4'>
-            <div>
-              <p className='text-xs uppercase tracking-[0.2em] text-teal-700'>
-                Exam Screen
-              </p>
-              <h1 className='text-2xl font-semibold'>{exam.title}</h1>
-            </div>
-            <p className='rounded-lg border border-teal-200 bg-teal-50 px-4 py-2 text-lg font-semibold text-teal-800'>
-              {minutes}:{seconds}
-            </p>
+    <main className='min-h-screen bg-[#f8fafc] p-6'>
+      <div className='max-w-4xl mx-auto space-y-6'>
+        {/* top bar */}
+        <div className='flex items-center justify-between bg-white border rounded-xl px-6 py-4'>
+          <p className='text-sm font-medium text-gray-600'>
+            Question ({activeQuestion + 1}/{exam.questions.length})
+          </p>
+
+          <div className='bg-gray-100 px-4 py-2 rounded-lg text-sm font-semibold'>
+            {minutes}:{seconds} left
           </div>
-        </header>
+        </div>
 
-        {!started ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Ready to Start?</CardTitle>
-              <CardDescription>
-                Timer starts immediately. Tab switch and fullscreen exits are
-                tracked for behavior monitoring.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={startExam}>Start Exam</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Question {activeQuestion + 1}</CardTitle>
-              <CardDescription>{question?.title}</CardDescription>
-            </CardHeader>
-            <CardContent className='flex flex-col gap-5'>
-              {submitted ? (
-                <div className='rounded-xl border border-teal-200 bg-teal-50 p-4'>
-                  <p className='font-medium text-teal-900'>Exam submitted.</p>
-                  <p className='mt-1 text-sm text-teal-800'>
-                    Monitoring summary: {tabSwitchCount} tab switches,{' '}
-                    {fullscreenExitCount} fullscreen exits.
-                  </p>
-                </div>
-              ) : question?.type === 'text' ? (
-                <textarea
-                  className='min-h-32 rounded-md border border-input bg-transparent px-3 py-2 text-sm'
-                  placeholder='Write your answer here...'
+        {/* question card */}
+        <Card className='rounded-xl'>
+          <CardHeader>
+            <CardTitle className='text-base font-semibold'>
+              Q{activeQuestion + 1}. {question?.title}
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className='space-y-3'>
+            {question?.options.map((option: string) => (
+              <label
+                key={option}
+                className='flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer hover:bg-gray-50'
+              >
+                <input
+                  type='radio'
+                  name={`q-${question.id}`}
+                  className='w-4 h-4'
+                  checked={selectedAnswer === option}
+                  onChange={() =>
+                    setAnswers((prev) => ({
+                      ...prev,
+                      [question.id]: option,
+                    }))
+                  }
                 />
-              ) : (
-                <div className='flex flex-col gap-2'>
-                  {question?.options.map((option) => (
-                    <label
-                      key={option}
-                      className='flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm'
-                    >
-                      <input
-                        type={question.type}
-                        name={`q-${question.id}`}
-                        value={option}
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
+                <span className='text-sm'>{option}</span>
+              </label>
+            ))}
 
-              <div className='flex flex-wrap justify-between gap-3'>
-                <div className='flex gap-2'>
-                  <Button
-                    variant='outline'
-                    disabled={activeQuestion === 0 || submitted}
-                    onClick={() => setActiveQuestion((current) => current - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant='outline'
-                    disabled={
-                      activeQuestion >= exam.questions.length - 1 || submitted
-                    }
-                    onClick={() => setActiveQuestion((current) => current + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-                <Button disabled={submitted} onClick={submitExam}>
-                  Manual Submit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </section>
+            {/* footer buttons */}
+            <div className='flex items-center justify-between pt-4'>
+              <Button
+                variant='outline'
+                type='button'
+                onClick={handleSkipQuestion}
+              >
+                Skip this Question
+              </Button>
+
+              <Button
+                className='bg-purple-600 hover:bg-purple-700'
+                type='button'
+                onClick={handleSaveAndContinue}
+              >
+                {isLastQuestion ? 'Save & Finish' : 'Save & Continue'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
