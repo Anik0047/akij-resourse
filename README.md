@@ -196,16 +196,18 @@ I have not used MCP directly in this project yet. A practical use case here woul
 
 The fastest workflow for frontend work is usually a mix of GitHub Copilot for inline implementation, ChatGPT or Claude for architecture and debugging help, and small repeatable prompts for tasks like component scaffolding, form wiring, and test case generation. The best results come from using AI to draft quickly, then reviewing the code manually for correctness, accessibility, and project conventions.
 
-### SMTP Email Setup
-
-SMTP email sending was not implemented because Supabase email sending limits were reached, so the feature was left out for now.
-
 ### Offline Mode
 
 If a candidate loses internet during an exam, the safest approach is to keep the exam state local while the connection is down and sync it once the network returns. That means saving answers, timer state, and submission drafts in browser storage, showing a clear offline status banner, blocking duplicate submits, and reconnecting through a background sync queue or retry flow. For stricter integrity, the exam can also enforce an autosave cadence and a final server-side validation step before accepting the submission.
+
 
 ## Learn More
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
 - [Vercel Deployment Docs](https://nextjs.org/docs/app/building-your-application/deploying)
+
+
+### SMTP Email Setup
+
+SMTP email sending was not implemented because Supabase email sending limits were reached, so the feature was left out for now.
