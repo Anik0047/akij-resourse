@@ -2,6 +2,12 @@
 
 Akij Resource is a Next.js 16 application for candidate and employer workflows. It uses Supabase for authentication, user profiles, and exam data, with shared UI primitives built on Tailwind CSS, shadcn-style components, and generated Boneyard skeleton assets.
 
+## Project Links
+
+- GitHub: https://github.com/Anik0047/akij-resourse
+- Live Site: https://akij-resourse.vercel.app/
+- Demo Video: https://drive.google.com/file/d/12RHPLH8j_xWD_kShQZT_jPk4ZafHX6vy/view?usp=sharing
+
 ## Tech Stack
 
 - Next.js 16 with the App Router
@@ -189,6 +195,10 @@ I have not used MCP directly in this project yet. A practical use case here woul
 ### AI Tools for Development
 
 The fastest workflow for frontend work is usually a mix of GitHub Copilot for inline implementation, ChatGPT or Claude for architecture and debugging help, and small repeatable prompts for tasks like component scaffolding, form wiring, and test case generation. The best results come from using AI to draft quickly, then reviewing the code manually for correctness, accessibility, and project conventions.
+
+### SMTP Email Setup
+
+SMTP email sending was not implemented because Supabase email sending limits were reached, so the feature was left out for now.
 
 ### Offline Mode
 
