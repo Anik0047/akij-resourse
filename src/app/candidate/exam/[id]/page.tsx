@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Bold, Italic, List, Redo2, Underline, Undo2 } from 'lucide-react';
 import { Skeleton } from 'boneyard-js/react';
@@ -13,6 +13,11 @@ import Image from 'next/image';
 const supabase = createClient();
 
 type AnswerValue = string | string[];
+type BehaviorEventType =
+  | 'tab_switch'
+  | 'fullscreen_exit'
+  | 'fullscreen_enter'
+  | 'auto_submit_policy';
 
 export default function CandidateExamPage() {
   const router = useRouter();
@@ -25,15 +30,110 @@ export default function CandidateExamPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isTimeOut, setIsTimeOut] = useState(false);
   const [candidateName, setCandidateName] = useState('Candidate');
+  const [candidateId, setCandidateId] = useState<string | null>(null);
+  const [candidateEmail, setCandidateEmail] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoSubmitInProgress, setAutoSubmitInProgress] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [completionNote, setCompletionNote] = useState<string | null>(null);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [fullscreenExitCount, setFullscreenExitCount] = useState(0);
+  const [isFullscreenActive, setIsFullscreenActive] = useState(false);
+  const [hasEnteredFullscreen, setHasEnteredFullscreen] = useState(false);
+  const [behaviorAlert, setBehaviorAlert] = useState<string | null>(null);
+  const submissionInFlightRef = useRef(false);
+  const policyTriggeredRef = useRef(false);
 
   const exam = useMemo(
     () => exams.find((item) => item.id === params.id),
     [exams, params.id],
   );
   const showLoadingSkeleton = isLoading && !exam;
+  const behaviorViolationLimit = Math.max(
+    1,
+    Number(exam?.behaviorViolationLimit ?? 3),
+  );
+  const totalViolations = tabSwitchCount + fullscreenExitCount;
+
+  const persistBehaviorEvent = async (
+    eventType: BehaviorEventType,
+    eventMeta: Record<string, unknown> = {},
+    submissionId?: string,
+  ) => {
+    if (!exam || !candidateId) {
+      return;
+    }
+
+    await supabase.from('exam_behavior_events').insert({
+      exam_id: exam.id,
+      submission_id: submissionId ?? null,
+      employee_id: exam.employeeId,
+      candidate_id: candidateId,
+      candidate_email: candidateEmail,
+      event_type: eventType,
+      event_meta: eventMeta,
+    });
+  };
+
+  const submitCurrentExam = async (reason: 'manual' | 'timeout' | 'policy') => {
+    if (!exam || hasSubmitted || submissionInFlightRef.current) {
+      return { ok: false };
+    }
+
+    submissionInFlightRef.current = true;
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    if (reason === 'policy') {
+      setAutoSubmitInProgress(true);
+    }
+
+    try {
+      const result = await submitExam({ exam, answers });
+
+      if (!result.ok) {
+        setSubmissionError(result.message ?? 'Failed to save your answers.');
+        return { ok: false };
+      }
+
+      setHasSubmitted(true);
+
+      if (reason === 'manual') {
+        setCompletionNote(null);
+        setIsCompleted(true);
+      }
+
+      if (reason === 'policy') {
+        setCompletionNote(
+          'Your exam was auto-submitted after repeated behavior policy violations.',
+        );
+        await persistBehaviorEvent(
+          'auto_submit_policy',
+          {
+            threshold: behaviorViolationLimit,
+            totalViolations,
+            tabSwitchCount,
+            fullscreenExitCount,
+          },
+          result.submissionId,
+        );
+        setIsCompleted(true);
+      }
+
+      return { ok: true };
+    } catch (error) {
+      setSubmissionError(
+        error instanceof Error ? error.message : 'Failed to save your answers.',
+      );
+      return { ok: false };
+    } finally {
+      submissionInFlightRef.current = false;
+      setIsSubmitting(false);
+      if (reason === 'policy') {
+        setAutoSubmitInProgress(false);
+      }
+    }
+  };
 
   useEffect(() => {
     const ensureAuthenticated = async () => {
@@ -59,6 +159,8 @@ export default function CandidateExamPage() {
       const displayName =
         profile?.full_name || profile?.email || data.user.email || 'Candidate';
       setCandidateName(displayName);
+      setCandidateId(data.user.id);
+      setCandidateEmail(profile?.email ?? data.user.email ?? null);
     };
 
     void ensureAuthenticated();
@@ -73,10 +175,97 @@ export default function CandidateExamPage() {
       setAnswers({});
       setIsCompleted(false);
       setIsTimeOut(false);
+      setHasSubmitted(false);
+      setSubmissionError(null);
+      setCompletionNote(null);
+      setTabSwitchCount(0);
+      setFullscreenExitCount(0);
+      setBehaviorAlert(null);
+      setHasEnteredFullscreen(false);
+      setAutoSubmitInProgress(false);
+      submissionInFlightRef.current = false;
+      policyTriggeredRef.current = false;
     }, 0);
 
     return () => window.clearTimeout(initTimer);
   }, [exam]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isCompleted && !isTimeOut) {
+        setTabSwitchCount((prev) => {
+          const next = prev + 1;
+          void persistBehaviorEvent('tab_switch', {
+            count: next,
+            questionIndex: activeQuestion,
+            timeLeft,
+          });
+          return next;
+        });
+        setBehaviorAlert(
+          'Tab switch detected. Please stay on the exam screen.',
+        );
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      const active = Boolean(document.fullscreenElement);
+      setIsFullscreenActive(active);
+
+      if (active) {
+        setHasEnteredFullscreen(true);
+        void persistBehaviorEvent('fullscreen_enter', {
+          questionIndex: activeQuestion,
+          timeLeft,
+        });
+        return;
+      }
+
+      if (hasEnteredFullscreen && !isCompleted && !isTimeOut) {
+        setFullscreenExitCount((prev) => {
+          const next = prev + 1;
+          void persistBehaviorEvent('fullscreen_exit', {
+            count: next,
+            questionIndex: activeQuestion,
+            timeLeft,
+          });
+          return next;
+        });
+        setBehaviorAlert(
+          'Fullscreen exit detected. Please re-enter fullscreen mode.',
+        );
+      }
+    };
+
+    setIsFullscreenActive(Boolean(document.fullscreenElement));
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [
+    activeQuestion,
+    hasEnteredFullscreen,
+    isCompleted,
+    isTimeOut,
+    timeLeft,
+    totalViolations,
+  ]);
+
+  useEffect(() => {
+    if (!isCompleted && !isTimeOut) {
+      return;
+    }
+
+    if (!document.fullscreenElement) {
+      return;
+    }
+
+    void document.exitFullscreen().catch(() => undefined);
+  }, [isCompleted, isTimeOut]);
 
   useEffect(() => {
     if (!exam || isCompleted || isTimeOut || timeLeft <= 0) return;
@@ -100,22 +289,50 @@ export default function CandidateExamPage() {
     }
 
     const persistTimeoutSubmission = async () => {
-      setIsSubmitting(true);
-      setSubmissionError(null);
-
-      const result = await submitExam({ exam, answers });
-
-      if (!result.ok) {
-        setSubmissionError(result.message ?? 'Failed to save your answers.');
-      } else {
-        setHasSubmitted(true);
-      }
-
-      setIsSubmitting(false);
+      await submitCurrentExam('timeout');
     };
 
     void persistTimeoutSubmission();
   }, [answers, exam, hasSubmitted, isSubmitting, isTimeOut, submitExam]);
+
+  useEffect(() => {
+    if (
+      !exam ||
+      isTimeOut ||
+      isCompleted ||
+      hasSubmitted ||
+      isSubmitting ||
+      policyTriggeredRef.current
+    ) {
+      return;
+    }
+
+    if (totalViolations < behaviorViolationLimit) {
+      return;
+    }
+
+    setBehaviorAlert(
+      `Behavior policy limit reached (${behaviorViolationLimit}). Auto-submitting exam.`,
+    );
+    policyTriggeredRef.current = true;
+
+    const submitForPolicyViolation = async () => {
+      const result = await submitCurrentExam('policy');
+      if (!result.ok) {
+        policyTriggeredRef.current = false;
+      }
+    };
+
+    void submitForPolicyViolation();
+  }, [
+    exam,
+    hasSubmitted,
+    isCompleted,
+    isSubmitting,
+    isTimeOut,
+    totalViolations,
+    behaviorViolationLimit,
+  ]);
 
   const skeletonFallback = (
     <main className='min-h-screen bg-[#eceef2] px-3 pt-6 md:pt-14'>
@@ -206,20 +423,7 @@ export default function CandidateExamPage() {
           return;
         }
 
-        setIsSubmitting(true);
-        setSubmissionError(null);
-
-        const result = await submitExam({ exam, answers });
-
-        if (!result.ok) {
-          setSubmissionError(result.message ?? 'Failed to save your answers.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        setHasSubmitted(true);
-        setIsSubmitting(false);
-        setIsCompleted(true);
+        await submitCurrentExam('manual');
       };
 
       void completeExam();
@@ -234,6 +438,19 @@ export default function CandidateExamPage() {
     goNextQuestion();
   };
   const handleBackToDashboard = () => router.push('/candidate/dashboard');
+
+  const handleEnterFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setBehaviorAlert(null);
+    } catch {
+      setBehaviorAlert(
+        'Unable to enter fullscreen automatically in this browser session.',
+      );
+    }
+  };
 
   const minutes = Math.floor(timeLeft / 60)
     .toString()
@@ -270,6 +487,11 @@ export default function CandidateExamPage() {
             Congratulations! {candidateName}, You have completed your{' '}
             {exam.title} exam. Thank you for participating.
           </p>
+          {completionNote ? (
+            <p className='mx-auto mt-2 max-w-4xl text-sm text-amber-700'>
+              {completionNote}
+            </p>
+          ) : null}
           {submissionError ? (
             <p className='mx-auto mt-2 max-w-3xl text-sm text-red-600'>
               {submissionError}
@@ -291,14 +513,71 @@ export default function CandidateExamPage() {
   return (
     <main className='min-h-screen bg-[#eceef2] px-3 pt-6 md:pt-14'>
       <div className='mx-auto max-w-350 space-y-4 sm:space-y-6'>
+        {autoSubmitInProgress ? (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 60 }}
+            className='flex items-center justify-center bg-black/45 px-4'
+          >
+            <section className='w-full max-w-lg rounded-2xl border border-violet-200 bg-white px-6 py-8 text-center shadow-2xl'>
+              <p className='text-lg font-semibold text-slate-800'>
+                Auto-submitting your exam
+              </p>
+              <p className='mt-2 text-sm text-slate-600'>
+                Behavior policy limit reached. Please wait while we securely
+                save your answers.
+              </p>
+              <div className='mx-auto mt-5 h-2 w-48 overflow-hidden rounded-full bg-violet-100'>
+                <div className='h-full w-full animate-pulse rounded-full bg-violet-500' />
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {behaviorAlert ? (
+          <div className='flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900'>
+            <p>{behaviorAlert}</p>
+            <button
+              type='button'
+              className='shrink-0 rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-900'
+              onClick={() => setBehaviorAlert(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+
         {/* top bar */}
         <div className='flex items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 sm:px-6 sm:py-4'>
           <p className='text-base font-medium text-slate-700 sm:text-xl md:text-xl'>
             Question ({activeQuestion + 1}/{exam.questions.length})
           </p>
 
-          <div className='rounded-xl bg-[#eef0f4] px-4 py-2 text-center text-base font-medium text-slate-700 sm:px-6 sm:py-3 sm:text-xl md:min-w-38 md:px-8 md:text-xl'>
-            {minutes}:{seconds} left
+          <div className='flex items-center gap-3'>
+            <div className='hidden text-xs font-medium text-slate-600 md:block'>
+              Tab Switches: {tabSwitchCount} | Fullscreen Exits:{' '}
+              {fullscreenExitCount} | Limit: {behaviorViolationLimit}
+            </div>
+
+            {isFullscreenActive ? (
+              <span className='hidden rounded-md border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 md:inline-flex'>
+                Fullscreen On
+              </span>
+            ) : (
+              <Button
+                type='button'
+                variant='outline'
+                className='hidden h-9 rounded-md border-zinc-300 px-3 text-xs md:inline-flex'
+                onClick={handleEnterFullscreen}
+              >
+                Enter Fullscreen
+              </Button>
+            )}
+
+            <div className='rounded-xl bg-[#eef0f4] px-4 py-2 text-center text-base font-medium text-slate-700 sm:px-6 sm:py-3 sm:text-xl md:min-w-38 md:px-8 md:text-xl'>
+              {autoSubmitInProgress
+                ? 'Auto-submitting...'
+                : `${minutes}:${seconds} left`}
+            </div>
           </div>
         </div>
 
@@ -435,11 +714,13 @@ export default function CandidateExamPage() {
                 onClick={handleSaveAndContinue}
                 disabled={isTimeOut || isSubmitting}
               >
-                {isLastQuestion
-                  ? isSubmitting
-                    ? 'Submitting...'
-                    : 'Save & Finish'
-                  : 'Save & Continue'}
+                {autoSubmitInProgress
+                  ? 'Auto-submitting...'
+                  : isLastQuestion
+                    ? isSubmitting
+                      ? 'Submitting...'
+                      : 'Save & Finish'
+                    : 'Save & Continue'}
               </Button>
             </div>
           </CardContent>

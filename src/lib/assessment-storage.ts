@@ -20,6 +20,7 @@ const seededExams: Exam[] = [
     endTime: '2026-04-12T12:00',
     duration: 1,
     negativeMarking: 0.25,
+    behaviorViolationLimit: 3,
     candidates: [
       'maria@candidate.com',
       'tayeb@candidate.com',
@@ -57,6 +58,7 @@ const seededExams: Exam[] = [
     endTime: '2026-04-13T17:00',
     duration: 1,
     negativeMarking: 0,
+    behaviorViolationLimit: 3,
     candidates: ['anik@candidate.com', 'sajid@candidate.com'],
     questions: [
       {

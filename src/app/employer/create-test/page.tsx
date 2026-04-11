@@ -19,6 +19,7 @@ type BasicForm = {
   startTime: string;
   endTime: string;
   duration: number;
+  behaviorViolationLimit: number;
 };
 
 const initialBasicForm: BasicForm = {
@@ -30,6 +31,7 @@ const initialBasicForm: BasicForm = {
   startTime: '',
   endTime: '',
   duration: 30,
+  behaviorViolationLimit: 3,
 };
 
 const questionTemplate: Question = {
@@ -76,7 +78,8 @@ export default function CreateTestPage() {
       basicForm.startTime.trim() &&
       basicForm.endTime.trim() &&
       basicForm.duration > 0 &&
-      basicForm.totalCandidates > 0,
+      basicForm.totalCandidates > 0 &&
+      basicForm.behaviorViolationLimit > 0,
     );
   }, [basicForm]);
 
@@ -192,6 +195,7 @@ export default function CreateTestPage() {
       endTime: basicForm.endTime,
       duration: basicForm.duration,
       negativeMarking: 0.25,
+      behaviorViolationLimit: basicForm.behaviorViolationLimit,
       candidates: [],
       questions,
     });
@@ -501,6 +505,33 @@ export default function CreateTestPage() {
                         placeholder='Duration time'
                       />
                     </div>
+
+                    <div className='flex flex-col gap-2'>
+                      <Label
+                        htmlFor='behavior-violation-limit'
+                        className={fieldLabelClass}
+                      >
+                        Behavior Violation Limit{' '}
+                        <span className='text-[#ef4444]'>*</span>
+                      </Label>
+                      <Input
+                        id='behavior-violation-limit'
+                        type='number'
+                        min={1}
+                        value={basicForm.behaviorViolationLimit}
+                        onChange={(event) =>
+                          setBasicForm((prev) => ({
+                            ...prev,
+                            behaviorViolationLimit: Math.max(
+                              1,
+                              Number(event.target.value) || 1,
+                            ),
+                          }))
+                        }
+                        className={inputClass}
+                        placeholder='Allowed violations before auto-submit'
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -574,6 +605,15 @@ export default function CreateTestPage() {
                         <p>Question Type</p>
                         <p className='mt-1 text-sm font-semibold text-[#334155]'>
                           {getQuestionTypeLabel(basicForm.questionType)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className='mt-4 grid gap-4 text-xs text-[#6c7896] md:grid-cols-2'>
+                      <div>
+                        <p>Behavior Violation Limit</p>
+                        <p className='mt-1 text-sm font-semibold text-[#334155]'>
+                          {basicForm.behaviorViolationLimit}
                         </p>
                       </div>
                     </div>

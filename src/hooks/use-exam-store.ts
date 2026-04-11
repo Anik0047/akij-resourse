@@ -60,6 +60,10 @@ function toExam(row: Record<string, unknown>): Exam {
     endTime: String(row.end_time ?? ''),
     duration: Number(row.duration_minutes ?? 30),
     negativeMarking: Number(row.negative_marking ?? 0),
+    behaviorViolationLimit: Math.max(
+      1,
+      Number(row.behavior_violation_limit ?? 3),
+    ),
     candidates: parseStringArray(row.candidates),
     questions: questionsRaw
       .filter(
@@ -138,6 +142,7 @@ type ExamStore = {
     message?: string;
     score?: number;
     maxScore?: number;
+    submissionId?: string;
   }>;
 };
 
@@ -160,6 +165,7 @@ const useExamStoreBase = create<ExamStore>()((set) => {
           end_time,
           duration_minutes,
           negative_marking,
+          behavior_violation_limit,
           candidates,
           questions(
             id,
@@ -216,6 +222,7 @@ const useExamStoreBase = create<ExamStore>()((set) => {
         end_time: new Date(exam.endTime).toISOString(),
         duration_minutes: exam.duration,
         negative_marking: exam.negativeMarking,
+        behavior_violation_limit: exam.behaviorViolationLimit,
         candidates: exam.candidates,
       })
       .select('id')
@@ -343,6 +350,7 @@ const useExamStoreBase = create<ExamStore>()((set) => {
       ok: true,
       score: clampedScore,
       maxScore,
+      submissionId: String(submission.id),
     };
   };
 

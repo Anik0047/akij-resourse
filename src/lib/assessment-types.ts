@@ -21,6 +21,7 @@ export type Exam = {
   endTime: string;
   duration: number;
   negativeMarking: number;
+  behaviorViolationLimit: number;
   candidates: string[];
   questions: Question[];
 };

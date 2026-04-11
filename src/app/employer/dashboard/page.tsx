@@ -63,6 +63,13 @@ export default function EmployerDashboardPage() {
       correctAnswer: unknown;
     }>
   >([]);
+  const [candidateBehaviorSummary, setCandidateBehaviorSummary] = useState<{
+    totalEvents: number;
+    tabSwitches: number;
+    fullscreenExits: number;
+    autoSubmittedByPolicy: boolean;
+    latestEventAt: string | null;
+  } | null>(null);
   const [isLoadingCandidateResult, setIsLoadingCandidateResult] =
     useState(false);
   const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
@@ -100,6 +107,7 @@ export default function EmployerDashboardPage() {
     setCandidateResultError(null);
     setCandidateSubmission(null);
     setCandidateAnswers([]);
+    setCandidateBehaviorSummary(null);
 
     let submissionQuery = supabase
       .from('exam_submissions')
@@ -182,6 +190,42 @@ export default function EmployerDashboardPage() {
     });
 
     setCandidateAnswers(normalizedAnswers);
+
+    let behaviorQuery = supabase
+      .from('exam_behavior_events')
+      .select('event_type, created_at')
+      .eq('exam_id', examId)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (candidateId) {
+      behaviorQuery = behaviorQuery.eq('candidate_id', candidateId);
+    } else {
+      behaviorQuery = behaviorQuery.eq('candidate_email', candidateEmail);
+    }
+
+    const { data: behaviorRows } = await behaviorQuery;
+
+    const events = behaviorRows ?? [];
+    const tabSwitches = events.filter(
+      (event) => event.event_type === 'tab_switch',
+    ).length;
+    const fullscreenExits = events.filter(
+      (event) => event.event_type === 'fullscreen_exit',
+    ).length;
+    const autoSubmittedByPolicy = events.some(
+      (event) => event.event_type === 'auto_submit_policy',
+    );
+
+    setCandidateBehaviorSummary({
+      totalEvents: events.length,
+      tabSwitches,
+      fullscreenExits,
+      autoSubmittedByPolicy,
+      latestEventAt:
+        events.length > 0 ? String(events[0]?.created_at ?? '') : null,
+    });
+
     setIsLoadingCandidateResult(false);
   };
 
@@ -189,6 +233,7 @@ export default function EmployerDashboardPage() {
     setSelectedExam(exam);
     setCandidateSubmission(null);
     setCandidateAnswers([]);
+    setCandidateBehaviorSummary(null);
     setCandidateResultError(null);
     setSelectedCandidateEmail(null);
     setIsLoadingCandidateResult(false);
@@ -606,6 +651,32 @@ export default function EmployerDashboardPage() {
                           ).toLocaleString()}
                         </span>
                       </div>
+
+                      {candidateBehaviorSummary ? (
+                        <div className='rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900'>
+                          <p className='font-semibold'>Behavior Summary</p>
+                          <p className='mt-1'>
+                            Total Events: {candidateBehaviorSummary.totalEvents}{' '}
+                            | Tab Switches:{' '}
+                            {candidateBehaviorSummary.tabSwitches} | Fullscreen
+                            Exits: {candidateBehaviorSummary.fullscreenExits}
+                          </p>
+                          <p className='mt-1'>
+                            Policy Auto-Submit:{' '}
+                            {candidateBehaviorSummary.autoSubmittedByPolicy
+                              ? 'Yes'
+                              : 'No'}
+                          </p>
+                          {candidateBehaviorSummary.latestEventAt ? (
+                            <p className='mt-1'>
+                              Latest Event:{' '}
+                              {new Date(
+                                candidateBehaviorSummary.latestEventAt,
+                              ).toLocaleString()}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
 
                       {candidateAnswers.length === 0 ? (
                         <p className='text-sm text-zinc-600'>

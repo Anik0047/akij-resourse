@@ -27,15 +27,22 @@ import {
 import Link from 'next/link';
 
 export function LoginForm({
+  forcedRole,
   className,
   ...props
-}: React.ComponentPropsWithoutRef<'div'>) {
+}: React.ComponentPropsWithoutRef<'div'> & {
+  forcedRole?: 'candidate' | 'employer';
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'candidate' | 'employer'>('candidate');
+  const [role, setRole] = useState<'candidate' | 'employer'>(
+    forcedRole ?? 'candidate',
+  );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
+  const roleLabel = role === 'candidate' ? 'Candidate' : 'Employer';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,22 +161,31 @@ export function LoginForm({
               <div className='flex flex-col gap-6'>
                 <div className='grid gap-2'>
                   <Label htmlFor='role'>Role</Label>
-                  <Select
-                    value={role}
-                    onValueChange={(value) =>
-                      setRole(value as 'candidate' | 'employer')
-                    }
-                  >
-                    <SelectTrigger id='role' className='w-full'>
-                      <SelectValue placeholder='Select role' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value='candidate'>Candidate</SelectItem>
-                        <SelectItem value='employer'>Employee</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                  {forcedRole ? (
+                    <div
+                      id='role'
+                      className='flex h-9 items-center rounded-md border border-input bg-muted/30 px-3 text-sm font-medium text-foreground'
+                    >
+                      {roleLabel}
+                    </div>
+                  ) : (
+                    <Select
+                      value={role}
+                      onValueChange={(value) =>
+                        setRole(value as 'candidate' | 'employer')
+                      }
+                    >
+                      <SelectTrigger id='role' className='w-full'>
+                        <SelectValue placeholder='Select role' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value='candidate'>Candidate</SelectItem>
+                          <SelectItem value='employer'>Employer</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div className='grid gap-2'>
                   <Label htmlFor='email'>Email</Label>
@@ -209,7 +225,7 @@ export function LoginForm({
                   {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
               </div>
-              <div className='mt-4 text-center text-sm py-[32px]'>
+              <div className='mt-4 py-8 text-center text-sm'>
                 Don&apos;t have an account?{' '}
                 <Link
                   href='/auth/sign-up'

@@ -31,12 +31,12 @@ export default function RootLayout({
       lang='en'
       className={`${dmSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className='h-10 flex flex-col bg-[#f4f4f6]'>
+      <body className='min-h-screen flex flex-col bg-[#f4f4f6]'>
         <BonesProvider />
         <div className='w-full bg-white border-b border-zinc-100'>
           <Navbar />
         </div>
-        {children}
+        <main className='flex-1'>{children}</main>
         <div className='w-full bg-[#130B2C]'>
           <Footer />
         </div>
