@@ -12,6 +12,26 @@ Akij Resource is a Next.js 16 application for candidate and employer workflows. 
 - Boneyard for skeleton generation
 - Lucide icons and Radix UI primitives
 
+## New Features
+
+- Dedicated authentication entry points for each role:
+  - Candidate login: `/auth/login/candidate`
+  - Employer login: `/auth/login/employer`
+  - Role chooser: `/auth/login`
+- Employer test creation now supports a per-exam behavior policy threshold (`behavior_violation_limit`).
+- Candidate exam session includes behavior tracking:
+  - tab switch detection
+  - fullscreen enter and exit detection
+  - visual behavior warnings during the exam
+- Automatic exam submission when behavior violations reach the configured per-exam limit.
+- Full-screen blocking overlay during policy-triggered auto-submit to prevent interaction while answers are being saved.
+- Employer candidate review modal now includes behavior summary analytics:
+  - total events
+  - tab switches
+  - fullscreen exits
+  - whether policy-based auto-submit occurred
+  - latest behavior event timestamp
+
 ## Prerequisites
 
 Install the following before you start:
@@ -49,6 +69,8 @@ These values are required by both the browser and server Supabase clients in `sr
 4. Apply the database migrations.
 
 The repository includes the full schema for auth profiles, employer/candidate role tables, exam data, online tests, and submission linking.
+
+Latest additions also include behavior event tracking and per-exam behavior policy limits.
 
 If you are using the Supabase CLI locally, apply the migrations in order. A typical flow is:
 
@@ -109,6 +131,8 @@ The Supabase schema under `supabase/migrations` includes:
 - `employees` and `candidates` tables
 - `questions`, `exam_submissions`, and `exam_submission_answers`
 - `online_tests`
+- `online_tests.behavior_violation_limit` (per-exam threshold)
+- `exam_behavior_events` for proctoring/behavior logs
 - triggers for role syncing and ownership enforcement
 - row-level security policies for authenticated access
 
@@ -128,7 +152,10 @@ supabase/migrations/   SQL migrations for the database schema
 
 ## Key Routes
 
-- `/login`, `/sign-up`, `/forgot-password`, `/update-password`: authentication flow
+- `/auth/login`: role-aware login chooser
+- `/auth/login/candidate`: candidate login page
+- `/auth/login/employer`: employer login page
+- `/auth/sign-up`, `/auth/forgot-password`, `/auth/update-password`: authentication flow
 - `/candidate/dashboard`: candidate workspace
 - `/candidate/exam/[id]`: candidate exam page
 - `/employer/dashboard`: employer workspace
